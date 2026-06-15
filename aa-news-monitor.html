@@ -1,861 +1,123 @@
-<!DOCTYPE html>
-<html lang="en-AU">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Auto Action News Monitor</title>
-<style>
-  :root {
-    --bg: #0f0f0f;
-    --surface: #1a1a1a;
-    --surface2: #222222;
-    --border: #2e2e2e;
-    --border2: #3a3a3a;
-    --text: #e8e8e8;
-    --text2: #999999;
-    --text3: #666666;
-    --accent: #e8001c;
-    --accent2: #ff1f38;
-    --blue: #185FA5;
-    --blue-bg: #0d2540;
-    --green: #3B8A2A;
-    --green-bg: #0f2a0a;
-    --orange: #d4720a;
-    --orange-bg: #2a1a00;
-    --font: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
-    --mono: 'SF Mono', 'Fira Code', monospace;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: var(--bg); color: var(--text); font-family: var(--font); font-size: 14px; line-height: 1.5; min-height: 100vh; }
+// Auto Action News Monitor — Cloudflare Worker v2
+// Handles: RSS/HTML proxy + Anthropic API relay
 
-  /* Header */
-  .header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 24px; display: flex; align-items: center; justify-content: space-between; height: 52px; position: sticky; top: 0; z-index: 100; }
-  .logo { display: flex; align-items: center; gap: 10px; }
-  .logo-mark { width: 28px; height: 28px; background: var(--accent); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; color: #fff; letter-spacing: -0.5px; }
-  .logo-text { font-size: 13px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text); }
-  .logo-sub { font-size: 11px; color: var(--text3); letter-spacing: 0.12em; text-transform: uppercase; }
-  .header-right { display: flex; align-items: center; gap: 8px; }
-  .clock-display { font-size: 11px; color: var(--text3); font-family: var(--mono); }
-
-  /* Buttons */
-  button { font-family: var(--font); cursor: pointer; border: none; }
-  .btn { font-size: 12px; padding: 6px 14px; border-radius: 4px; font-weight: 500; transition: opacity 0.15s; }
-  .btn:hover { opacity: 0.85; }
-  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
-  .btn-primary { background: var(--accent); color: #fff; }
-  .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border2); }
-  .btn-ghost { background: none; color: var(--text2); border: 1px solid var(--border); font-size: 11px; padding: 5px 10px; border-radius: 4px; }
-  .btn-blue { background: var(--blue-bg); color: #5b9fd6; border: 1px solid #1e4a7a; font-size: 11px; padding: 4px 10px; border-radius: 4px; }
-  .btn-xs { font-size: 11px; padding: 4px 10px; border-radius: 4px; background: var(--surface2); color: var(--text2); border: 1px solid var(--border2); }
-  .btn-xs:hover { color: var(--text); border-color: var(--border2); }
-
-  /* Layout */
-  .main { display: grid; grid-template-columns: 240px 1fr; min-height: calc(100vh - 52px); }
-  .sidebar { background: var(--surface); border-right: 1px solid var(--border); padding: 16px 0; position: sticky; top: 52px; height: calc(100vh - 52px); overflow-y: auto; }
-  .content { padding: 20px 24px; }
-
-  /* Sidebar */
-  .sidebar-section { padding: 0 16px; margin-bottom: 20px; }
-  .sidebar-label { font-size: 10px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text3); margin-bottom: 8px; }
-  .series-btn { width: 100%; text-align: left; display: flex; align-items: center; justify-content: space-between; padding: 7px 12px; border-radius: 4px; font-size: 13px; color: var(--text2); background: none; border: none; transition: all 0.1s; }
-  .series-btn:hover { background: var(--surface2); color: var(--text); }
-  .series-btn.active { background: var(--surface2); color: var(--text); }
-  .series-btn .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-  .dot-nascar { background: #e05a3a; }
-  .dot-indycar { background: #5b9fd6; }
-  .dot-motogp { background: #e09a3a; }
-  .dot-wrc { background: #5bc25b; }
-  .dot-wec { background: #a090e0; }
-  .dot-news { background: var(--text3); }
-  .series-name { flex: 1; margin-left: 8px; }
-  .series-count { font-size: 11px; font-family: var(--mono); color: var(--text3); }
-  .series-btn.active .series-count { color: var(--text2); }
-
-  /* Status bar */
-  .status-bar { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 10px 14px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
-  .status-left { display: flex; align-items: center; gap: 10px; }
-  .status-indicator { width: 8px; height: 8px; border-radius: 50%; background: var(--text3); }
-  .status-indicator.live { background: #5bc25b; box-shadow: 0 0 6px #5bc25b88; }
-  .status-indicator.loading { background: #5b9fd6; animation: pulse 1s infinite; }
-  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
-  .status-text { font-size: 12px; color: var(--text2); }
-  .status-right { display: flex; align-items: center; gap: 8px; }
-  .next-check-text { font-size: 11px; color: var(--text3); font-family: var(--mono); }
-
-  /* Queue bar */
-  .queue-bar { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 10px 14px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
-  .queue-left { display: flex; align-items: center; gap: 12px; }
-  .queue-label { font-size: 11px; color: var(--text3); }
-  .queue-label strong { color: var(--text2); }
-  .queue-dots { display: flex; gap: 4px; }
-  .qdot { width: 10px; height: 10px; border-radius: 2px; border: 1px solid var(--border2); background: var(--surface2); }
-  .qdot.used { background: var(--blue); border-color: var(--blue); }
-  .queue-mode { font-size: 10px; color: var(--text3); padding: 2px 6px; border-radius: 3px; background: var(--surface2); border: 1px solid var(--border); }
-  .queue-mode.race { color: var(--accent); border-color: #3a0a0a; background: #1a0505; }
-
-  /* Dedup bar */
-  .dedup-bar { font-size: 11px; color: var(--text3); padding: 7px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 4px; margin-bottom: 12px; display: none; }
-  .dedup-bar strong { color: var(--text2); }
-
-  /* Filter bar */
-  .filter-bar { display: flex; gap: 8px; margin-bottom: 16px; align-items: center; flex-wrap: wrap; }
-  select { background: var(--surface2); color: var(--text2); border: 1px solid var(--border2); border-radius: 4px; padding: 5px 10px; font-size: 12px; font-family: var(--font); }
-  select:focus { outline: none; border-color: var(--blue); }
-  .filter-count { font-size: 11px; color: var(--text3); margin-left: auto; }
-
-  /* Story cards */
-  .story-card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 14px 16px; margin-bottom: 8px; transition: border-color 0.15s; }
-  .story-card:hover { border-color: var(--border2); }
-  .story-card.priority { border-left: 3px solid var(--accent); }
-  .story-card.posted-card { opacity: 0.45; }
-  .card-top { display: flex; gap: 12px; align-items: flex-start; }
-  .tags-col { display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; padding-top: 2px; }
-  .series-tag { font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 3px; white-space: nowrap; letter-spacing: 0.06em; text-transform: uppercase; }
-  .tag-nascar { background: #2a0f08; color: #e05a3a; border: 1px solid #3a1a0a; }
-  .tag-indycar { background: #0a1a2a; color: #5b9fd6; border: 1px solid #0f2a40; }
-  .tag-motogp { background: #2a1a05; color: #e09a3a; border: 1px solid #3a2a0a; }
-  .tag-wrc { background: #0a1f0a; color: #5bc25b; border: 1px solid #0f2f0f; }
-  .tag-wec { background: #1a1528; color: #a090e0; border: 1px solid #2a2040; }
-  .tag-news { background: var(--surface2); color: var(--text3); border: 1px solid var(--border); }
-  .type-pill { font-size: 9px; padding: 2px 6px; border-radius: 3px; background: var(--surface2); color: var(--text3); border: 1px solid var(--border); white-space: nowrap; }
-  .card-body { flex: 1; min-width: 0; }
-  .story-title { font-size: 14px; font-weight: 500; color: var(--text); line-height: 1.4; margin-bottom: 3px; }
-  .story-meta { font-size: 11px; color: var(--text3); margin-bottom: 7px; font-family: var(--mono); }
-  .driver-tags { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 8px; }
-  .driver-chip { font-size: 10px; padding: 2px 8px; border-radius: 3px; background: var(--blue-bg); color: #5b9fd6; border: 1px solid #1e3a5a; font-weight: 500; }
-  .card-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; align-items: center; }
-  .queued-badge { font-size: 10px; padding: 3px 8px; border-radius: 3px; background: var(--orange-bg); color: #e09a3a; border: 1px solid #3a2500; }
-  .posted-badge { font-size: 10px; padding: 3px 8px; border-radius: 3px; background: var(--green-bg); color: #5bc25b; border: 1px solid #1a3a10; }
-  .limit-note { font-size: 10px; color: var(--orange); }
-
-  /* Rewrite output */
-  .rewrite-output { margin-top: 14px; border-top: 1px solid var(--border); padding-top: 14px; }
-  .output-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
-  .output-field { font-size: 12px; }
-  .output-field label { display: block; font-size: 10px; color: var(--text3); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 3px; }
-  .output-field .val { color: var(--text2); }
-  .output-field .val.headline { color: var(--text); font-weight: 500; font-size: 13px; }
-  .output-field code { font-family: var(--mono); font-size: 11px; color: var(--text3); }
-  .story-body-output { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 14px; font-size: 13px; line-height: 1.8; color: var(--text2); white-space: pre-wrap; max-height: 400px; overflow-y: auto; }
-  .post-row { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; align-items: center; }
-  .copy-confirm { font-size: 11px; color: var(--green); opacity: 0; transition: opacity 0.3s; }
-  .copy-confirm.show { opacity: 1; }
-
-  /* Results tables */
-  .results-block { margin-top: 14px; }
-  .results-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .rt { width: 100%; border-collapse: collapse; font-size: 12px; }
-  .rt th { text-align: left; padding: 6px 10px; background: var(--surface2); color: var(--text3); font-weight: 500; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; border-bottom: 1px solid var(--border); }
-  .rt td { padding: 6px 10px; border-bottom: 1px solid var(--border); color: var(--text2); }
-  .rt tr:last-child td { border-bottom: none; }
-  .rt tr.watched td { color: #5b9fd6; font-weight: 500; }
-  .rt td:first-child { color: var(--text3); font-family: var(--mono); font-size: 11px; width: 24px; }
-  .rt-label { font-size: 10px; color: var(--text3); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 6px; }
-
-  /* Settings panel */
-  .settings-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 200; align-items: center; justify-content: center; }
-  .settings-overlay.open { display: flex; }
-  .settings-modal { background: var(--surface); border: 1px solid var(--border2); border-radius: 8px; padding: 24px; width: 480px; max-width: 90vw; }
-  .settings-modal h2 { font-size: 15px; font-weight: 600; margin-bottom: 20px; color: var(--text); }
-  .form-group { margin-bottom: 14px; }
-  .form-group label { display: block; font-size: 11px; color: var(--text3); margin-bottom: 5px; letter-spacing: 0.06em; text-transform: uppercase; }
-  .form-group input, .form-group select { width: 100%; background: var(--bg); color: var(--text); border: 1px solid var(--border2); border-radius: 4px; padding: 8px 10px; font-size: 13px; font-family: var(--font); }
-  .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--blue); }
-  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .modal-actions { display: flex; gap: 8px; margin-top: 20px; justify-content: flex-end; }
-  .settings-note { font-size: 11px; color: var(--text3); margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); line-height: 1.6; }
-
-  /* Empty state */
-  .empty-state { text-align: center; padding: 60px 24px; color: var(--text3); }
-  .empty-state h3 { font-size: 15px; color: var(--text2); margin-bottom: 8px; font-weight: 500; }
-  .empty-state p { font-size: 13px; line-height: 1.6; }
-
-  /* Feed log */
-  .feed-log { margin-top: 16px; font-size: 11px; color: var(--text3); line-height: 2; background: var(--surface); border: 1px solid var(--border); border-radius: 4px; padding: 12px 14px; max-height: 140px; overflow-y: auto; display: none; font-family: var(--mono); }
-  .feed-log .ok { color: var(--green); }
-  .feed-log .fail { color: var(--accent); }
-
-  /* Spinner */
-  .spin { display: inline-block; width: 10px; height: 10px; border: 1.5px solid currentColor; border-top-color: transparent; border-radius: 50%; animation: spinning 0.7s linear infinite; }
-  @keyframes spinning { to { transform: rotate(360deg); } }
-
-  /* Source link */
-  a.source-link { font-size: 11px; padding: 4px 10px; border-radius: 4px; background: none; color: var(--text3); border: 1px solid var(--border); text-decoration: none; display: inline-flex; align-items: center; gap: 4px; }
-  a.source-link:hover { color: var(--text2); border-color: var(--border2); }
-
-  /* Scrollbar */
-  ::-webkit-scrollbar { width: 6px; height: 6px; }
-  ::-webkit-scrollbar-track { background: var(--bg); }
-  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
-</style>
-</head>
-<body>
-
-<header class="header">
-  <div class="logo">
-    <div class="logo-mark">AA</div>
-    <div>
-      <div class="logo-text">Auto Action</div>
-      <div class="logo-sub">News Monitor</div>
-    </div>
-  </div>
-  <div class="header-right">
-    <span class="clock-display" id="clock"></span>
-    <button class="btn btn-secondary" onclick="openSettings()">Settings</button>
-    <button class="btn btn-primary" onclick="fetchAll()" id="refresh-btn">Check now</button>
-  </div>
-</header>
-
-<div class="main">
-  <!-- Sidebar -->
-  <nav class="sidebar">
-    <div class="sidebar-section">
-      <div class="sidebar-label">Series</div>
-      <button class="series-btn active" data-series="all" onclick="filterSeries('all')">
-        <span class="dot" style="background:var(--text3)"></span>
-        <span class="series-name">All stories</span>
-        <span class="series-count" id="cnt-all">0</span>
-      </button>
-      <button class="series-btn" data-series="NASCAR" onclick="filterSeries('NASCAR')">
-        <span class="dot dot-nascar"></span>
-        <span class="series-name">NASCAR</span>
-        <span class="series-count" id="cnt-NASCAR">0</span>
-      </button>
-      <button class="series-btn" data-series="IndyCar" onclick="filterSeries('IndyCar')">
-        <span class="dot dot-indycar"></span>
-        <span class="series-name">IndyCar</span>
-        <span class="series-count" id="cnt-IndyCar">0</span>
-      </button>
-      <button class="series-btn" data-series="MotoGP" onclick="filterSeries('MotoGP')">
-        <span class="dot dot-motogp"></span>
-        <span class="series-name">MotoGP</span>
-        <span class="series-count" id="cnt-MotoGP">0</span>
-      </button>
-      <button class="series-btn" data-series="WRC" onclick="filterSeries('WRC')">
-        <span class="dot dot-wrc"></span>
-        <span class="series-name">WRC</span>
-        <span class="series-count" id="cnt-WRC">0</span>
-      </button>
-      <button class="series-btn" data-series="WEC" onclick="filterSeries('WEC')">
-        <span class="dot dot-wec"></span>
-        <span class="series-name">WEC</span>
-        <span class="series-count" id="cnt-WEC">0</span>
-      </button>
-      <button class="series-btn" data-series="News" onclick="filterSeries('News')">
-        <span class="dot dot-news"></span>
-        <span class="series-name">News</span>
-        <span class="series-count" id="cnt-News">0</span>
-      </button>
-    </div>
-
-    <div class="sidebar-section">
-      <div class="sidebar-label">Type</div>
-      <button class="series-btn active" data-type="all" onclick="filterType('all')">
-        <span class="series-name">All types</span>
-        <span class="series-count" id="cnt-type-all">0</span>
-      </button>
-      <button class="series-btn" data-type="Race" onclick="filterType('Race')">
-        <span class="series-name">Race reports</span>
-        <span class="series-count" id="cnt-type-Race">0</span>
-      </button>
-      <button class="series-btn" data-type="Qualifying" onclick="filterType('Qualifying')">
-        <span class="series-name">Qualifying</span>
-        <span class="series-count" id="cnt-type-Qualifying">0</span>
-      </button>
-      <button class="series-btn" data-type="Practice" onclick="filterType('Practice')">
-        <span class="series-name">Practice</span>
-        <span class="series-count" id="cnt-type-Practice">0</span>
-      </button>
-      <button class="series-btn" data-type="News" onclick="filterType('News')">
-        <span class="series-name">News</span>
-        <span class="series-count" id="cnt-type-News">0</span>
-      </button>
-    </div>
-
-    <div class="sidebar-section">
-      <div class="sidebar-label">Status</div>
-      <select onchange="filterStatus(this.value)" style="width:100%;margin-bottom:0;">
-        <option value="all">All stories</option>
-        <option value="new">Not posted</option>
-        <option value="queued">In queue</option>
-        <option value="posted">Posted</option>
-      </select>
-    </div>
-
-    <div class="sidebar-section" style="margin-top:8px;">
-      <button class="btn btn-ghost" onclick="postQueue()" id="post-queue-btn" style="width:100%;display:none;">Post queue to WordPress</button>
-    </div>
-  </nav>
-
-  <!-- Main content -->
-  <main class="content">
-    <div class="status-bar">
-      <div class="status-left">
-        <div class="status-indicator" id="status-dot"></div>
-        <span class="status-text" id="status-text">Ready to check feeds</span>
-      </div>
-      <div class="status-right">
-        <span class="next-check-text" id="next-check"></span>
-        <button class="btn-ghost" onclick="resetWindow()">Reset window</button>
-      </div>
-    </div>
-
-    <div class="queue-bar">
-      <div class="queue-left">
-        <div>
-          <div class="queue-label">Posts this window: <strong id="posts-used">0</strong> / 4</div>
-        </div>
-        <div class="queue-dots" id="queue-dots"></div>
-        <span class="queue-mode" id="queue-mode">Quiet period</span>
-      </div>
-      <div style="font-size:11px;color:var(--text3);" id="dedup-inline"></div>
-    </div>
-
-    <div class="dedup-bar" id="dedup-bar"></div>
-
-    <div id="stories-list"></div>
-    <div class="feed-log" id="feed-log"></div>
-  </main>
-</div>
-
-<!-- Settings modal -->
-<div class="settings-overlay" id="settings-overlay" onclick="if(event.target===this)closeSettings()">
-  <div class="settings-modal">
-    <h2>Settings</h2>
-    <div class="form-row">
-      <div class="form-group">
-        <label>WordPress site URL</label>
-        <input type="url" id="wp-url" placeholder="https://autoaction.com.au" />
-      </div>
-      <div class="form-group">
-        <label>Username</label>
-        <input type="text" id="wp-user" placeholder="editor" />
-      </div>
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label>Application Password</label>
-        <input type="password" id="wp-pass" placeholder="xxxx xxxx xxxx xxxx" />
-      </div>
-      <div class="form-group">
-        <label>Post as</label>
-        <select id="wp-status">
-          <option value="draft">Draft</option>
-          <option value="publish">Publish immediately</option>
-        </select>
-      </div>
-    </div>
-    <div class="form-group">
-      <label>Cloudflare Worker URL</label>
-      <input type="url" id="worker-url" value="https://aa-news-proxy.andrew-ebd.workers.dev" />
-    </div>
-    <div class="modal-actions">
-      <button class="btn btn-secondary" onclick="closeSettings()">Cancel</button>
-      <button class="btn btn-primary" onclick="saveSettings()">Save settings</button>
-    </div>
-    <div class="settings-note">
-      To get a WordPress Application Password: go to Users &rarr; Profile &rarr; scroll to Application Passwords &rarr; type a name &rarr; click Add.
-    </div>
-  </div>
-</div>
-
-<script>
-// ─── CONFIG ──────────────────────────────────────────────────────────────────
-const WATCHLIST = ['Oscar Piastri','Will Power','Scott McLaughlin','Shane van Gisbergen','Senna Aguis','Jack Miller','Lochie Hughes'];
-const MAX_POSTS = 4;
-const AA_FEED = 'https://autoaction.com.au/feed';
-
-const FEEDS = [
-  {series:'NASCAR', url:'https://www.motorsport.com/rss/nascar-cup/news/'},
-  {series:'NASCAR', url:'https://www.the-race.com/category/nascar/feed/'},
-  {series:'IndyCar', url:'https://www.motorsport.com/rss/indycar/news/'},
-  {series:'IndyCar', url:'https://www.the-race.com/category/indycar/feed/'},
-  {series:'MotoGP', url:'https://www.motorsport.com/rss/motogp/news/'},
-  {series:'MotoGP', url:'https://www.the-race.com/category/motogp/feed/'},
-  {series:'WRC', url:'https://www.motorsport.com/rss/wrc/news/'},
-  {series:'WRC', url:'https://www.the-race.com/category/wrc/feed/'},
-  {series:'WEC', url:'https://www.motorsport.com/rss/wec/news/'},
-  {series:'WEC', url:'https://www.the-race.com/category/wec/feed/'},
-  {series:'News', url:'https://www.speedcafe.com/feed/'},
-  {series:'News', url:'https://www.motorsportweek.com/feed/'},
-  {series:'News', url:'https://www.the-race.com/rss/'},
+const ALLOWED_DOMAINS = [
+  'autoaction.com.au',
+  'motorsport.com',
+  'the-race.com',
+  'speedcafe.com',
+  'motorsportweek.com',
+  'autosport.com',
+  'racingnews365.com',
+  'jayski.com',
+  'crash.net',
+  'gpfans.com',
+  'motogp.com',
+  'wrc.com',
+  'fiawec.com',
+  'indycar.com',
+  'nascar.com',
 ];
 
-// ─── STATE ───────────────────────────────────────────────────────────────────
-let stories = [], currentSeries = 'all', currentType = 'all', currentStatus = 'all';
-let wpSettings = {}, workerUrl = 'https://aa-news-proxy.andrew-ebd.workers.dev';
-let checkInterval = null, nextCheckTime = null;
-let windowPostCount = 0, windowStartTime = new Date(), queuedIds = [];
-let aaKeywords = new Set();
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, x-api-key, anthropic-version',
+};
 
-// ─── LOAD SAVED SETTINGS ─────────────────────────────────────────────────────
-try { wpSettings = JSON.parse(localStorage.getItem('aa-wp') || '{}'); } catch(e){}
-try { workerUrl = localStorage.getItem('aa-worker') || workerUrl; } catch(e){}
-try {
-  const w = JSON.parse(localStorage.getItem('aa-window') || '{}');
-  windowPostCount = w.count || 0;
-  windowStartTime = w.start ? new Date(w.start) : new Date();
-} catch(e){}
+export default {
+  async fetch(request) {
 
-function proxy(url) { return `${workerUrl}/?url=${encodeURIComponent(url)}`; }
-
-// ─── TIMING ──────────────────────────────────────────────────────────────────
-function isRaceWeekend() {
-  const d = new Date(), day = d.getDay(), h = d.getHours();
-  return (day===5&&h>=16)||day===6||(day===0&&h<12);
-}
-function getIntervalMs() { return isRaceWeekend() ? 60*60*1000 : 4*60*60*1000; }
-
-function scheduleChecks() {
-  if (checkInterval) clearInterval(checkInterval);
-  const ms = getIntervalMs();
-  nextCheckTime = new Date(Date.now() + ms);
-  // Reset window counts at each new check cycle
-  windowPostCount = 0;
-  queuedIds = [];
-  stories.forEach(s => { if(s.status==='queued') s.status='new'; });
-  saveWindowState();
-  checkInterval = setInterval(() => { fetchAll(); scheduleChecks(); }, ms);
-  updateQueueBar();
-}
-
-function updateNextCheck() {
-  if (!nextCheckTime) return;
-  const mins = Math.max(0, Math.round((nextCheckTime - Date.now()) / 60000));
-  const el = document.getElementById('next-check');
-  if (el) el.textContent = `Next check in ${mins}m`;
-}
-
-// ─── DEDUP ────────────────────────────────────────────────────────────────────
-function titleKeywords(title) {
-  const stop = new Set(['the','a','an','in','at','of','to','for','and','with','on','is','was','after','from','by','as','race','racing','grand','prix','gp']);
-  return title.toLowerCase().replace(/[^a-z0-9\s]/g,'').split(/\s+/).filter(w => w.length>3 && !stop.has(w));
-}
-function titlesMatch(a, b) {
-  const kwA = titleKeywords(a), kwB = new Set(titleKeywords(b));
-  if (!kwA.length || !kwB.size) return false;
-  const matches = kwA.filter(w => kwB.has(w)).length;
-  return matches / Math.max(kwA.length, kwB.size) >= 0.4;
-}
-function alreadyOnSite(story) {
-  for (const t of aaKeywords) { if (titlesMatch(story.title, t)) return true; }
-  return false;
-}
-async function fetchAASite() {
-  try {
-    const res = await fetch(proxy(AA_FEED), {signal: AbortSignal.timeout(8000)});
-    if (!res.ok) return 0;
-    const text = await res.text();
-    const xml = new DOMParser().parseFromString(text, 'text/xml');
-    if (xml.querySelector('parsererror')) return 0;
-    aaKeywords = new Set();
-    xml.querySelectorAll('item title').forEach(el => { if(el.textContent) aaKeywords.add(el.textContent.trim()); });
-    return aaKeywords.size;
-  } catch(e) { return 0; }
-}
-
-// ─── STORY DETECTION ──────────────────────────────────────────────────────────
-function detectType(title, desc) {
-  const t = (title+' '+desc).toLowerCase();
-  if (/\bwins\b|win the|race result|race report|victory|takes win|podium finish|wins at/.test(t)) return 'Race';
-  if (/qualif|pole position|pole time|starts from|grid position|front row/.test(t)) return 'Qualifying';
-  if (/\bfp1\b|\bfp2\b|\bfp3\b|free practice|practice session/.test(t)) return 'Practice';
-  return 'News';
-}
-function detectDrivers(text) {
-  const t = text.toLowerCase();
-  return WATCHLIST.filter(d => t.includes(d.toLowerCase()) || t.includes(d.split(' ').pop().toLowerCase()));
-}
-function isWatchedDriver(name) {
-  const n = name.toLowerCase();
-  return WATCHLIST.some(d => n.includes(d.toLowerCase()) || n.includes(d.split(' ').pop().toLowerCase()));
-}
-function timeAgo(dateStr) {
-  if (!dateStr) return '';
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff/60000);
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins/60);
-  if (hrs < 24) return `${hrs}h ago`;
-  return `${Math.floor(hrs/24)}d ago`;
-}
-
-// ─── FETCH ALL FEEDS ──────────────────────────────────────────────────────────
-async function fetchAll() {
-  setStatus('loading', 'Checking Auto Action site...');
-  document.getElementById('refresh-btn').disabled = true;
-
-  const aaCount = await fetchAASite();
-  setStatus('loading', 'Fetching news feeds...');
-
-  const seen = new Set(stories.map(s => s.link));
-  let newStories = [], ok = 0, fail = 0, deduped = 0;
-  const log = [];
-
-  for (const feed of FEEDS) {
-    try {
-      const res = await fetch(proxy(feed.url), {signal: AbortSignal.timeout(10000)});
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const text = await res.text();
-      const xml = new DOMParser().parseFromString(text, 'text/xml');
-      if (xml.querySelector('parsererror')) throw new Error('XML parse error');
-      let count = 0, skip = 0;
-      xml.querySelectorAll('item').forEach(item => {
-        const title = item.querySelector('title')?.textContent?.trim() || '';
-        const link = item.querySelector('link')?.textContent?.trim() || '';
-        const desc = item.querySelector('description')?.textContent?.replace(/<[^>]+>/g,'').trim().substring(0,400) || '';
-        const pubDate = item.querySelector('pubDate')?.textContent || '';
-        if (!title || !link || seen.has(link)) return;
-        if (alreadyOnSite({title})) { deduped++; skip++; seen.add(link); return; }
-        seen.add(link); count++;
-        const type = detectType(title, desc);
-        const drivers = detectDrivers(title+' '+desc);
-        newStories.push({title, link, desc, pubDate, series:feed.series, type, drivers, priority:drivers.length>0, id:Math.random().toString(36).slice(2), status:'new'});
-      });
-      log.push({ok:true, msg:`[${count} new, ${skip} on AA] ${feed.url}`}); ok++;
-    } catch(e) {
-      log.push({ok:false, msg:`[${e.message}] ${feed.url}`}); fail++;
+    // Handle CORS preflight
+    if (request.method === 'OPTIONS') {
+      return new Response(null, { headers: CORS_HEADERS });
     }
-  }
 
-  newStories.sort((a,b) => (b.priority-a.priority)||(new Date(b.pubDate)-new Date(a.pubDate)));
-  stories = [...newStories, ...stories].slice(0, 200);
+    const url = new URL(request.url);
 
-  if (!nextCheckTime) scheduleChecks();
-  else nextCheckTime = new Date(Date.now() + getIntervalMs());
+    // ─── ROUTE 1: Anthropic API relay (/anthropic) ───────────────────────────
+    // The browser can't call Anthropic directly due to CORS.
+    // This relay forwards the request server-side and returns the response.
+    if (url.pathname === '/anthropic') {
+      if (request.method !== 'POST') {
+        return new Response('POST only', { status: 405, headers: CORS_HEADERS });
+      }
 
-  setStatus('live', `${newStories.length} new stories · ${ok} feeds OK${fail ? ` · ${fail} failed` : ''}`);
-  document.getElementById('refresh-btn').disabled = false;
-
-  // Dedup bar
-  const db = document.getElementById('dedup-bar');
-  if (aaCount > 0 || deduped > 0) {
-    db.style.display = 'block';
-    db.innerHTML = `Checked <strong>${aaCount}</strong> existing Auto Action stories &mdash; <strong>${deduped}</strong> ${deduped===1?'story':'stories'} excluded as already covered`;
-  }
-
-  // Feed log
-  const logEl = document.getElementById('feed-log');
-  if (fail > 0) {
-    logEl.style.display = 'block';
-    logEl.innerHTML = log.map(l => `<span class="${l.ok?'ok':'fail'}">${l.msg}</span>`).join('<br>');
-  } else { logEl.style.display = 'none'; }
-
-  updateCounts(); renderStories(); updateQueueBar();
-}
-
-// ─── RENDER ───────────────────────────────────────────────────────────────────
-function seriesTagClass(s) {
-  return {NASCAR:'tag-nascar',IndyCar:'tag-indycar',MotoGP:'tag-motogp',WRC:'tag-wrc',WEC:'tag-wec',News:'tag-news'}[s]||'tag-news';
-}
-
-function renderStories() {
-  let filtered = stories.filter(s => {
-    if (currentSeries !== 'all' && s.series !== currentSeries) return false;
-    if (currentType !== 'all' && s.type !== currentType) return false;
-    if (currentStatus === 'new' && s.status !== 'new') return false;
-    if (currentStatus === 'queued' && s.status !== 'queued') return false;
-    if (currentStatus === 'posted' && s.status !== 'posted') return false;
-    return true;
-  });
-
-  const list = document.getElementById('stories-list');
-  if (!filtered.length) {
-    list.innerHTML = `<div class="empty-state"><h3>No stories found</h3><p>Hit "Check now" to fetch the latest, or adjust your filters.</p></div>`;
-    return;
-  }
-
-  list.innerHTML = filtered.map(s => {
-    const isQueued = s.status==='queued', isPosted = s.status==='posted';
-    const queueFull = queuedIds.length >= MAX_POSTS;
-    return `<div class="story-card${s.priority?' priority':''}${isPosted?' posted-card':''}" id="card-${s.id}">
-      <div class="card-top">
-        <div class="tags-col">
-          <span class="series-tag ${seriesTagClass(s.series)}">${s.series}</span>
-          <span class="type-pill">${s.type}</span>
-        </div>
-        <div class="card-body">
-          <div class="story-title">${s.title}</div>
-          <div class="story-meta">${timeAgo(s.pubDate)}</div>
-          ${s.drivers.length ? `<div class="driver-tags">${s.drivers.map(d=>`<span class="driver-chip">${d}</span>`).join('')}</div>` : ''}
-          <div class="card-actions">
-            <button class="btn-xs" onclick="rewrite('${s.id}')">Rewrite for AA</button>
-            ${!isPosted&&!isQueued ? `<button class="btn-blue" onclick="addToQueue('${s.id}')" ${queueFull?'disabled title="Queue full"':''}>+ Queue</button>` : ''}
-            ${isQueued ? `<span class="queued-badge">In queue</span><button class="btn-xs" onclick="removeFromQueue('${s.id}')" style="opacity:0.6;">Remove</button>` : ''}
-            ${isPosted ? `<span class="posted-badge">Posted</span>` : ''}
-            <a href="${s.link}" target="_blank" class="source-link">Source &rarr;</a>
-          </div>
-          <div id="rw-${s.id}"></div>
-        </div>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-function updateCounts() {
-  const all = stories.length;
-  document.getElementById('cnt-all').textContent = all;
-  ['NASCAR','IndyCar','MotoGP','WRC','WEC','News'].forEach(s => {
-    const el = document.getElementById('cnt-'+s);
-    if (el) el.textContent = stories.filter(x=>x.series===s).length;
-  });
-  ['Race','Qualifying','Practice','News'].forEach(t => {
-    const el = document.getElementById('cnt-type-'+t);
-    if (el) el.textContent = stories.filter(x=>x.type===t).length;
-  });
-  document.getElementById('cnt-type-all').textContent = all;
-}
-
-function filterSeries(s) {
-  currentSeries = s;
-  document.querySelectorAll('[data-series]').forEach(b => b.classList.toggle('active', b.dataset.series===s));
-  renderStories();
-}
-function filterType(t) {
-  currentType = t;
-  document.querySelectorAll('[data-type]').forEach(b => b.classList.toggle('active', b.dataset.type===t));
-  renderStories();
-}
-function filterStatus(v) { currentStatus = v; renderStories(); }
-
-function addToQueue(id) {
-  if (queuedIds.length >= MAX_POSTS) return;
-  const s = stories.find(x=>x.id===id); if (!s) return;
-  s.status='queued'; queuedIds.push(id); updateQueueBar(); renderStories();
-}
-function removeFromQueue(id) {
-  const s = stories.find(x=>x.id===id); if(s) s.status='new';
-  queuedIds = queuedIds.filter(x=>x!==id); updateQueueBar(); renderStories();
-}
-async function postQueue() {
-  if (!wpSettings.url||!wpSettings.user||!wpSettings.pass) { openSettings(); return; }
-  for (const id of [...queuedIds]) {
-    const s = stories.find(x=>x.id===id);
-    if (!s||!s._rewrite) { alert(`"${s?.title||id}" needs to be rewritten first.`); continue; }
-    await postSingle(id);
-  }
-}
-
-// ─── REWRITE ──────────────────────────────────────────────────────────────────
-function renderResultsTable(top5, champ) {
-  if (!top5||!top5.length) return '';
-  const rows = top5.slice(0,5).map((r,i) => {
-    const w = isWatchedDriver(r.driver||'');
-    return `<tr class="${w?'watched':''}"><td>${i+1}</td><td>${r.driver||''}</td><td style="color:var(--text3)">${r.team||''}</td><td style="color:var(--text3);text-align:right">${r.gap||''}</td></tr>`;
-  }).join('');
-  let champBlock = '';
-  if (champ&&champ.length) {
-    const crows = champ.slice(0,5).map((c,i) => {
-      const w = isWatchedDriver(c.driver||'');
-      return `<tr class="${w?'watched':''}"><td>${i+1}</td><td>${c.driver||''}</td><td style="color:var(--text3);text-align:right">${c.points||''} pts</td></tr>`;
-    }).join('');
-    champBlock = `<div><div class="rt-label">Championship</div><table class="rt"><thead><tr><th></th><th>Driver</th><th style="text-align:right">Points</th></tr></thead><tbody>${crows}</tbody></table></div>`;
-  }
-  return `<div class="results-block"><div class="results-grid">
-    <div><div class="rt-label">Race result</div><table class="rt"><thead><tr><th></th><th>Driver</th><th>Team</th><th style="text-align:right">Gap</th></tr></thead><tbody>${rows}</tbody></table></div>
-    ${champBlock}
-  </div><div style="font-size:10px;color:var(--text3);margin-top:6px;">Blue = watched driver</div></div>`;
-}
-
-async function rewrite(id) {
-  const story = stories.find(s=>s.id===id); if (!story) return;
-  const rw = document.getElementById(`rw-${id}`);
-  rw.innerHTML = `<div style="margin-top:10px;font-size:12px;color:#5b9fd6;display:flex;align-items:center;gap:6px;"><span class="spin"></span> Rewriting in AA style...</div>`;
-
-  const isRace = story.type==='Race';
-  const driverNote = story.drivers.length ? `Key Australian/NZ drivers mentioned: ${story.drivers.join(', ')}. Lead with the Australian angle where relevant.` : '';
-  const wordCount = isRace?'600-700':(story.type==='Qualifying'||story.type==='Practice')?'350-450':'400-500';
-  const resultsInstruction = isRace ? `\nAfter the story body output:\nRESULTS_JSON:\n{"top5":[{"pos":1,"driver":"Full Name","team":"Team","gap":"winner"},{"pos":2,"driver":"Full Name","team":"Team","gap":"+X.XXXs"},{"pos":3,"driver":"Full Name","team":"Team","gap":"+X.XXXs"},{"pos":4,"driver":"Full Name","team":"Team","gap":"+X.XXXs"},{"pos":5,"driver":"Full Name","team":"Team","gap":"+X.XXXs"}],"championship":[{"pos":1,"driver":"Full Name","points":000},{"pos":2,"driver":"Full Name","points":000},{"pos":3,"driver":"Full Name","points":000},{"pos":4,"driver":"Full Name","points":000},{"pos":5,"driver":"Full Name","points":000}]}\nMark uncertain values with ? suffix.` : '';
-
-  const prompt = `You are a sub-editor for Auto Action, the Australian motorsport magazine. Fully rewrite this story in Auto Action house style.
-
-Rules:
-- Complete rewrite, fresh angle and structure. Not a paraphrase.
-- Australian English throughout.
-- Story type: ${story.type}. Match tone accordingly.
-- Past tense for news and race reports.
-- No direct quotes at all. Facts and outcomes only.
-- Numbers one through nine spelled out; 10 and above as numerals.
-- People named in full on first mention, then surname only.
-- Safety Car always capitalised. Race, lap, round lowercase unless attached to a number (e.g. Lap 3).
-- Championship and series lowercase unless part of an official name.
-- No all-caps except official acronyms (NASCAR, WRC, WEC, MotoGP, IndyCar).
-- No ampersands except in official names. No en dashes or em dashes.
-- Short paragraphs, one idea each.
-- Word target: ${wordCount} words.
-${driverNote}
-
-Output using these exact labels:
-HEADLINE: [max 10 words]
-SEO TITLE: [under 60 characters]
-SLUG: [url-slug]
-TAGS: [5 tags comma separated]
-META: [under 155 characters]
-
-STORY:
-[body copy]
-${resultsInstruction}
-
-Source title: ${story.title}
-Series: ${story.series}
-Content: ${story.desc}`;
-
-  try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({model:'claude-sonnet-4-6', max_tokens:1500, messages:[{role:'user',content:prompt}]})
-    });
-    const data = await res.json();
-    const text = data.content?.[0]?.text || '';
-    const g = label => { const l = text.split('\n').find(x=>x.startsWith(label+':')); return l ? l.replace(label+':','').trim() : ''; };
-    const headline=g('HEADLINE'), seoTitle=g('SEO TITLE'), slug=g('SLUG'), tags=g('TAGS'), meta=g('META');
-    const si=text.indexOf('STORY:'), ri=text.indexOf('RESULTS_JSON:');
-    const body = si>=0 ? text.slice(si+6, ri>0?ri:undefined).trim() : text;
-
-    let resultsHTML = '';
-    if (isRace && ri>=0) {
       try {
-        const parsed = JSON.parse(text.slice(ri+13).trim().replace(/```json|```/g,'').trim());
-        resultsHTML = renderResultsTable(
-          (parsed.top5||[]).map(r=>({driver:r.driver,team:r.team,gap:r.gap})),
-          (parsed.championship||[]).map(c=>({driver:c.driver,points:c.points}))
-        );
-      } catch(e){}
+        const body = await request.text();
+
+        // Your Anthropic API key — set this as a Worker secret (see instructions)
+        const apiKey = request.env?.ANTHROPIC_API_KEY || '';
+
+        const response = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01',
+          },
+          body,
+        });
+
+        const data = await response.text();
+        return new Response(data, {
+          status: response.status,
+          headers: {
+            'Content-Type': 'application/json',
+            ...CORS_HEADERS,
+          },
+        });
+      } catch (err) {
+        return new Response(JSON.stringify({ error: err.message }), {
+          status: 502,
+          headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
+        });
+      }
     }
 
-    story._rewrite = {text, headline, seoTitle, slug, tags, meta, body, resultsHTML};
-    const wpReady = wpSettings.url && wpSettings.user && wpSettings.pass;
-    const limitHit = windowPostCount >= MAX_POSTS;
-
-    rw.innerHTML = `<div class="rewrite-output">
-      <div class="output-grid">
-        <div class="output-field"><label>Headline</label><div class="val headline">${headline}</div></div>
-        <div class="output-field"><label>Slug</label><div class="val"><code>${slug}</code></div></div>
-        <div class="output-field"><label>Tags</label><div class="val">${tags}</div></div>
-        <div class="output-field"><label>Meta</label><div class="val" style="font-size:11px;color:var(--text3)">${meta}</div></div>
-      </div>
-      <div class="story-body-output" id="body-${id}">${body}</div>
-      ${resultsHTML}
-      <div class="post-row">
-        <button class="btn-xs" onclick="copyBody('${id}')">Copy story</button>
-        <span class="copy-confirm" id="copied-${id}">Copied!</span>
-        ${wpReady&&!limitHit&&story.status!=='posted' ? `<button class="btn btn-primary" style="font-size:11px;padding:4px 14px;" onclick="postSingle('${id}')">Post to WordPress</button>` : ''}
-        ${limitHit&&story.status!=='posted' ? `<span class="limit-note">4-post limit reached for this window</span>` : ''}
-        <span id="wpres-${id}"></span>
-      </div>
-    </div>`;
-  } catch(e) {
-    rw.innerHTML = `<div style="font-size:12px;color:var(--accent);margin-top:8px;">Rewrite failed: ${e.message}</div>`;
-  }
-}
-
-function copyBody(id) {
-  const el = document.getElementById(`body-${id}`); if(!el) return;
-  navigator.clipboard.writeText(el.textContent).then(() => {
-    const c = document.getElementById(`copied-${id}`);
-    if(c){c.classList.add('show'); setTimeout(()=>c.classList.remove('show'),2000);}
-  });
-}
-
-// ─── WORDPRESS ────────────────────────────────────────────────────────────────
-async function postSingle(id) {
-  if (windowPostCount >= MAX_POSTS) { alert('4-post limit reached for this window.'); return; }
-  const story = stories.find(s=>s.id===id); if(!story||!story._rewrite) return;
-  const el = document.getElementById(`wpres-${id}`);
-  if(el) el.innerHTML = `<span style="font-size:11px;color:#5b9fd6;display:inline-flex;align-items:center;gap:4px;"><span class="spin"></span> Posting...</span>`;
-
-  const {headline, slug, meta, body, resultsHTML} = story._rewrite;
-  const fullContent = body + (resultsHTML ? '\n\n' + resultsHTML : '');
-  const token = btoa(`${wpSettings.user}:${wpSettings.pass}`);
-  try {
-    const res = await fetch(`${wpSettings.url}/wp-json/wp/v2/posts`, {
-      method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':`Basic ${token}`},
-      body: JSON.stringify({title:headline, content:fullContent, slug, status:wpSettings.status||'draft', excerpt:meta})
-    });
-    if (res.ok) {
-      const post = await res.json();
-      windowPostCount++; story.status='posted'; queuedIds=queuedIds.filter(x=>x!==id);
-      aaKeywords.add(headline);
-      saveWindowState();
-      if(el) el.innerHTML = `<span style="font-size:11px;color:var(--green);">Posted &mdash; <a href="${post.link}" target="_blank" style="color:inherit;">view post</a></span>`;
-      updateQueueBar(); renderStories();
-    } else {
-      const err = await res.json();
-      if(el) el.innerHTML = `<span style="font-size:11px;color:var(--accent);">WP error: ${err.message||res.status}</span>`;
+    // ─── ROUTE 2: RSS / HTML proxy (?url=...) ────────────────────────────────
+    if (request.method !== 'GET') {
+      return new Response('Method not allowed', { status: 405, headers: CORS_HEADERS });
     }
-  } catch(e) {
-    if(el) el.innerHTML = `<span style="font-size:11px;color:var(--accent);">Could not reach WordPress.</span>`;
-  }
-}
 
-// ─── UI HELPERS ───────────────────────────────────────────────────────────────
-function setStatus(state, text) {
-  const dot = document.getElementById('status-dot');
-  const txt = document.getElementById('status-text');
-  dot.className = 'status-indicator' + (state==='live'?' live':state==='loading'?' loading':'');
-  txt.textContent = text;
-}
+    const target = url.searchParams.get('url');
+    if (!target) {
+      return new Response('Missing ?url= parameter', { status: 400, headers: CORS_HEADERS });
+    }
 
-function updateQueueBar() {
-  document.getElementById('posts-used').textContent = windowPostCount;
-  const dots = document.getElementById('queue-dots');
-  dots.innerHTML = Array.from({length:4},(_,i)=>`<div class="qdot ${i<windowPostCount?'used':''}"></div>`).join('');
-  const mode = document.getElementById('queue-mode');
-  const rw = isRaceWeekend();
-  mode.textContent = rw ? 'Race weekend — hourly' : 'Quiet period — 4 hourly';
-  mode.className = 'queue-mode' + (rw?' race':'');
-  const pqb = document.getElementById('post-queue-btn');
-  pqb.style.display = queuedIds.length>0 && wpSettings.url ? 'block' : 'none';
-}
+    const targetHost = new URL(target).hostname.replace('www.', '');
+    const permitted = ALLOWED_DOMAINS.some(d => targetHost.endsWith(d));
+    if (!permitted) {
+      return new Response(`Domain not permitted: ${targetHost}`, { status: 403, headers: CORS_HEADERS });
+    }
 
-function resetWindow() {
-  windowPostCount=0; queuedIds=[];
-  stories.forEach(s=>{if(s.status==='queued')s.status='new';});
-  saveWindowState(); updateQueueBar(); renderStories();
-}
+    try {
+      const response = await fetch(target, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; AutoActionBot/1.0; +https://autoaction.com.au)',
+          'Accept': 'text/html,application/xhtml+xml,application/xml,application/rss+xml;q=0.9,*/*;q=0.8',
+          'Accept-Language': 'en-AU,en;q=0.9',
+        },
+        cf: {
+          cacheTtl: 300,
+          cacheEverything: true,
+        },
+      });
 
-function saveWindowState() {
-  try { localStorage.setItem('aa-window', JSON.stringify({count:windowPostCount,start:windowStartTime})); } catch(e){}
-}
-
-// ─── SETTINGS ─────────────────────────────────────────────────────────────────
-function openSettings() {
-  if(wpSettings.url) document.getElementById('wp-url').value=wpSettings.url;
-  if(wpSettings.user) document.getElementById('wp-user').value=wpSettings.user;
-  if(wpSettings.pass) document.getElementById('wp-pass').value=wpSettings.pass;
-  if(wpSettings.status) document.getElementById('wp-status').value=wpSettings.status;
-  document.getElementById('worker-url').value=workerUrl;
-  document.getElementById('settings-overlay').classList.add('open');
-}
-function closeSettings() { document.getElementById('settings-overlay').classList.remove('open'); }
-function saveSettings() {
-  wpSettings = {
-    url: document.getElementById('wp-url').value.trim().replace(/\/$/,''),
-    user: document.getElementById('wp-user').value.trim(),
-    pass: document.getElementById('wp-pass').value.trim(),
-    status: document.getElementById('wp-status').value
-  };
-  workerUrl = document.getElementById('worker-url').value.trim().replace(/\/$/,'');
-  try { localStorage.setItem('aa-wp', JSON.stringify(wpSettings)); } catch(e){}
-  try { localStorage.setItem('aa-worker', workerUrl); } catch(e){}
-  closeSettings(); updateQueueBar();
-}
-
-// ─── CLOCK ────────────────────────────────────────────────────────────────────
-function updateClock() {
-  const el = document.getElementById('clock');
-  if(el) el.textContent = new Date().toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit',timeZoneName:'short'});
-  updateNextCheck();
-}
-
-// ─── INIT ─────────────────────────────────────────────────────────────────────
-setInterval(updateClock, 30000);
-updateClock();
-updateQueueBar();
-renderStories();
-fetchAll();
-</script>
-</body>
-</html>
+      const body = await response.text();
+      return new Response(body, {
+        status: response.status,
+        headers: {
+          'Content-Type': response.headers.get('Content-Type') || 'text/plain',
+          'Cache-Control': 'public, max-age=300',
+          ...CORS_HEADERS,
+        },
+      });
+    } catch (err) {
+      return new Response(`Fetch failed: ${err.message}`, {
+        status: 502,
+        headers: CORS_HEADERS,
+      });
+    }
+  },
+};
