@@ -767,12 +767,21 @@ async function postSingle(id) {
 
   const {headline, slug, meta, body, resultsHTML} = story._rewrite;
   const fullContent = body + (resultsHTML ? '\n\n' + resultsHTML : '');
-  const token = btoa(`${wpSettings.user}:${wpSettings.pass}`);
+
   try {
-    const res = await fetch(`${wpSettings.url}/wp-json/wp/v2/posts`, {
+    const res = await fetch(`${workerUrl}/wordpress`, {
       method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':`Basic ${token}`},
-      body: JSON.stringify({title:headline, content:fullContent, slug, status:wpSettings.status||'draft', excerpt:meta})
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        wpUrl: wpSettings.url,
+        wpUser: wpSettings.user,
+        wpPass: wpSettings.pass,
+        wpStatus: wpSettings.status || 'draft',
+        title: headline,
+        content: fullContent,
+        slug,
+        excerpt: meta
+      })
     });
     if (res.ok) {
       const post = await res.json();
