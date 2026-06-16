@@ -780,7 +780,8 @@ async function postSingle(id) {
         title: headline,
         content: fullContent,
         slug,
-        excerpt: meta
+        excerpt: meta,
+        tags: (story._rewrite.tags || '').split(',').map(t => t.trim()).filter(Boolean)
       })
     });
     if (res.ok) {
