@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Auto Action News Monitor</title>
 <style>
-:root{--bg:#0f0f0f;--surface:#1a1a1a;--surface2:#222222;--border:#2e2e2e;--border2:#3a3a3a;--text:#e8e8e8;--text2:#999999;--text3:#666666;--accent:#e8001c;--blue:#185FA5;--blue-bg:#0d2540;--green:#3B8A2A;--green-bg:#0f2a0a;--orange:#d4720a;--orange-bg:#2a1a00;--font:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-serif;--mono:'SF Mono','Fira Code',monospace}
+:root{--bg:#0f0f0f;--surface:#1a1a1a;--surface2:#222222;--border:#2e2e2e;--border2:#3a3a3a;--text:#e8e8e8;--text2:#999999;--text3:#666666;--accent:#e8001c;--blue:#185FA5;--blue-bg:#0d2540;--green:#3B8A2A;--green-bg:#0f2a0a;--orange:#d4720a;--orange-bg:#2a1a00;--purple:#7a60d6;--purple-bg:#1a1528;--font:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-serif;--mono:'SF Mono','Fira Code',monospace}
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;line-height:1.5;min-height:100vh}
 .header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:52px;position:sticky;top:0;z-index:100}
@@ -35,30 +35,42 @@ button{font-family:var(--font);cursor:pointer;border:none}
 .dot-nascar{background:#e05a3a}.dot-indycar{background:#5b9fd6}.dot-motogp{background:#e09a3a}.dot-wrc{background:#5bc25b}.dot-wec{background:#a090e0}.dot-news{background:var(--text3)}
 .series-name{flex:1;margin-left:8px}
 .series-count{font-size:11px;font-family:var(--mono);color:var(--text3)}
-.status-bar{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px 14px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.status-bar{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
 .status-left{display:flex;align-items:center;gap:10px}
 .status-indicator{width:8px;height:8px;border-radius:50%;background:var(--text3)}
 .status-indicator.live{background:#5bc25b;box-shadow:0 0 6px #5bc25b88}
 .status-indicator.loading{background:#5b9fd6;animation:pulse 1s infinite}
+.status-indicator.posting{background:var(--accent);animation:pulse 1s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
 .status-text{font-size:12px;color:var(--text2)}
 .next-check-text{font-size:11px;color:var(--text3);font-family:var(--mono)}
-.queue-bar{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px 14px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
-.queue-left{display:flex;align-items:center;gap:12px}
-.queue-label{font-size:11px;color:var(--text3)}
-.queue-label strong{color:var(--text2)}
+.queue-bar{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
 .queue-dots{display:flex;gap:4px}
 .qdot{width:10px;height:10px;border-radius:2px;border:1px solid var(--border2);background:var(--surface2)}
 .qdot.used{background:var(--blue);border-color:var(--blue)}
+.qdot.auto{background:var(--accent);border-color:var(--accent)}
 .queue-mode{font-size:10px;color:var(--text3);padding:2px 6px;border-radius:3px;background:var(--surface2);border:1px solid var(--border)}
 .queue-mode.race{color:var(--accent);border-color:#3a0a0a;background:#1a0505}
+.activity-panel{background:var(--surface);border:1px solid var(--border);border-radius:6px;margin-bottom:12px}
+.activity-header{padding:8px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.activity-header span{font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--text3)}
+.activity-log{padding:10px 14px;max-height:160px;overflow-y:auto;font-family:var(--mono);font-size:11px;line-height:2}
+.log-entry{display:flex;gap:8px;align-items:baseline}
+.log-time{color:var(--text3);flex-shrink:0;width:48px}
+.log-msg{color:var(--text2)}
+.log-msg.ok{color:#5bc25b}
+.log-msg.err{color:var(--accent)}
+.log-msg.info{color:#5b9fd6}
+.log-msg.post{color:#a090e0}
+.log-msg.auto{color:var(--accent)}
 .dedup-bar{font-size:11px;color:var(--text3);padding:7px 12px;background:var(--surface);border:1px solid var(--border);border-radius:4px;margin-bottom:12px;display:none}
 .dedup-bar strong{color:var(--text2)}
 select{background:var(--surface2);color:var(--text2);border:1px solid var(--border2);border-radius:4px;padding:5px 10px;font-size:12px;font-family:var(--font)}
 .story-card{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px 16px;margin-bottom:8px}
 .story-card.priority{border-left:3px solid var(--accent)}
 .story-card.posted-card{opacity:0.45}
-.story-card.merged-card{border-left:3px solid #a090e0}
+.story-card.merged-card{border-left:3px solid var(--purple)}
+.story-card.auto-posted{border-left:3px solid var(--accent);opacity:0.6}
 .card-top{display:flex;gap:12px;align-items:flex-start}
 .tags-col{display:flex;flex-direction:column;gap:4px;flex-shrink:0;padding-top:2px}
 .series-tag{font-size:9px;font-weight:700;padding:2px 7px;border-radius:3px;white-space:nowrap;letter-spacing:0.06em;text-transform:uppercase}
@@ -69,7 +81,7 @@ select{background:var(--surface2);color:var(--text2);border:1px solid var(--bord
 .tag-wec{background:#1a1528;color:#a090e0;border:1px solid #2a2040}
 .tag-news{background:var(--surface2);color:var(--text3);border:1px solid var(--border)}
 .type-pill{font-size:9px;padding:2px 6px;border-radius:3px;background:var(--surface2);color:var(--text3);border:1px solid var(--border);white-space:nowrap}
-.merged-badge{font-size:9px;padding:2px 7px;border-radius:3px;background:#1a1528;color:#a090e0;border:1px solid #2a2040;white-space:nowrap}
+.merged-badge{font-size:9px;padding:2px 7px;border-radius:3px;background:var(--purple-bg);color:#a090e0;border:1px solid #2a2040;white-space:nowrap}
 .card-body{flex:1;min-width:0}
 .story-title{font-size:14px;font-weight:500;color:var(--text);line-height:1.4;margin-bottom:3px}
 .story-meta{font-size:11px;color:var(--text3);margin-bottom:7px;font-family:var(--mono)}
@@ -80,6 +92,7 @@ select{background:var(--surface2);color:var(--text2);border:1px solid var(--bord
 .card-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;align-items:center}
 .queued-badge{font-size:10px;padding:3px 8px;border-radius:3px;background:var(--orange-bg);color:#e09a3a;border:1px solid #3a2500}
 .posted-badge{font-size:10px;padding:3px 8px;border-radius:3px;background:var(--green-bg);color:#5bc25b;border:1px solid #1a3a10}
+.auto-badge{font-size:10px;padding:3px 8px;border-radius:3px;background:#1a0505;color:var(--accent);border:1px solid #3a0a0a}
 .limit-note{font-size:10px;color:var(--orange)}
 .rewrite-output{margin-top:14px;border-top:1px solid var(--border);padding-top:14px}
 .output-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
@@ -112,8 +125,6 @@ select{background:var(--surface2);color:var(--text2);border:1px solid var(--bord
 .settings-note{font-size:11px;color:var(--text3);margin-top:16px;padding-top:14px;border-top:1px solid var(--border);line-height:1.6}
 .empty-state{text-align:center;padding:60px 24px;color:var(--text3)}
 .empty-state h3{font-size:15px;color:var(--text2);margin-bottom:8px;font-weight:500}
-.feed-log{margin-top:16px;font-size:11px;color:var(--text3);line-height:2;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:12px 14px;max-height:140px;overflow-y:auto;display:none;font-family:var(--mono)}
-.feed-log .ok{color:var(--green)}.feed-log .fail{color:var(--accent)}
 .spin{display:inline-block;width:10px;height:10px;border:1.5px solid currentColor;border-top-color:transparent;border-radius:50%;animation:spinning 0.7s linear infinite}
 @keyframes spinning{to{transform:rotate(360deg)}}
 a.source-link{font-size:11px;padding:4px 10px;border-radius:4px;background:none;color:var(--text3);border:1px solid var(--border);text-decoration:none;display:inline-flex;align-items:center;gap:4px}
@@ -184,16 +195,25 @@ a.source-link:hover{color:var(--text2)}
 
     <div class="queue-bar">
       <div class="queue-left">
-        <div><div class="queue-label">Posts this window: <strong id="posts-used">0</strong> / 4</div></div>
+        <div style="font-size:11px;color:var(--text3)">Posts this window: <strong id="posts-used" style="color:var(--text2)">0</strong> / 4</div>
         <div class="queue-dots" id="queue-dots"></div>
         <span class="queue-mode" id="queue-mode">Quiet period</span>
       </div>
       <div style="font-size:11px;color:var(--text3)" id="dedup-inline"></div>
     </div>
 
+    <div class="activity-panel">
+      <div class="activity-header">
+        <span>Activity log</span>
+        <button class="btn-ghost" onclick="clearLog()">Clear</button>
+      </div>
+      <div class="activity-log" id="activity-log">
+        <div class="log-entry"><span class="log-time">--:--</span><span class="log-msg">Monitor ready. Hit Check now or wait for auto-refresh.</span></div>
+      </div>
+    </div>
+
     <div class="dedup-bar" id="dedup-bar"></div>
     <div id="stories-list"></div>
-    <div class="feed-log" id="feed-log"></div>
   </main>
 </div>
 
@@ -213,7 +233,7 @@ a.source-link:hover{color:var(--text2)}
       <button class="btn btn-secondary" onclick="closeSettings()">Cancel</button>
       <button class="btn btn-primary" onclick="saveSettings()">Save settings</button>
     </div>
-    <div class="settings-note">WordPress Application Password: Users &rarr; Profile &rarr; Application Passwords &rarr; Add new.</div>
+    <div class="settings-note">WordPress Application Password: Users &rarr; Profile &rarr; Application Passwords &rarr; Add new.<br>Auto-post selects up to 4 stories per cycle in priority order: SVG, McLaughlin, Power, Nationals, NASCAR, MotoGP, WRC, WEC, IndyCar, F1.</div>
   </div>
 </div>
 
@@ -221,6 +241,21 @@ a.source-link:hover{color:var(--text2)}
 var WATCHLIST = ['Oscar Piastri','Will Power','Scott McLaughlin','Shane van Gisbergen','Senna Aguis','Jack Miller','Lochie Hughes'];
 var MAX_POSTS = 4;
 var AA_FEED = 'https://autoaction.com.au/feed';
+
+// Priority order for auto-posting
+var AUTO_PRIORITY = [
+  {fn: function(s) { return storyMentions(s, 'Shane van Gisbergen'); }, label: 'SVG story'},
+  {fn: function(s) { return storyMentions(s, 'Scott McLaughlin'); }, label: 'McLaughlin story'},
+  {fn: function(s) { return storyMentions(s, 'Will Power'); }, label: 'Will Power story'},
+  {fn: function(s) { return s.series === 'News' && s.link && s.link.includes('motorsport.org.au'); }, label: 'Nationals story'},
+  {fn: function(s) { return s.series === 'NASCAR'; }, label: 'NASCAR story'},
+  {fn: function(s) { return s.series === 'MotoGP'; }, label: 'MotoGP story'},
+  {fn: function(s) { return s.series === 'WRC'; }, label: 'WRC story'},
+  {fn: function(s) { return s.series === 'WEC'; }, label: 'WEC story'},
+  {fn: function(s) { return s.series === 'IndyCar'; }, label: 'IndyCar story'},
+  {fn: function(s) { return storyMentions(s, 'F1') || storyMentionsKeyword(s, 'formula 1') || storyMentionsKeyword(s, 'formula one'); }, label: 'F1 story'}
+];
+
 var FEEDS = [
   {series:'NASCAR',url:'https://www.motorsport.com/rss/nascar-cup/news/'},
   {series:'NASCAR',url:'https://www.the-race.com/category/nascar/feed/'},
@@ -234,7 +269,8 @@ var FEEDS = [
   {series:'WEC',url:'https://www.the-race.com/category/wec/feed/'},
   {series:'News',url:'https://www.speedcafe.com/feed/'},
   {series:'News',url:'https://www.motorsportweek.com/feed/'},
-  {series:'News',url:'https://www.the-race.com/rss/'}
+  {series:'News',url:'https://www.the-race.com/rss/'},
+  {series:'News',url:'https://www.motorsport.org.au/feed/'}
 ];
 
 var stories = [], currentSeries = 'all', currentType = 'all', currentStatus = 'all';
@@ -242,12 +278,21 @@ var wpSettings = {}, workerUrl = 'https://aa-news-proxy.andrew-ebd.workers.dev';
 var checkInterval = null, nextCheckTime = null;
 var windowPostCount = 0, windowStartTime = new Date(), queuedIds = [];
 var aaKeywords = new Set();
+var autoPosting = false;
 
 try { wpSettings = JSON.parse(localStorage.getItem('aa-wp') || '{}'); } catch(e) {}
 try { workerUrl = localStorage.getItem('aa-worker') || workerUrl; } catch(e) {}
 try { var w = JSON.parse(localStorage.getItem('aa-window') || '{}'); windowPostCount = w.count || 0; windowStartTime = w.start ? new Date(w.start) : new Date(); } catch(e) {}
 
 function proxy(url) { return workerUrl + '/?url=' + encodeURIComponent(url); }
+
+function storyMentions(s, name) {
+  var t = (s.title + ' ' + s.desc).toLowerCase();
+  return t.includes(name.toLowerCase()) || t.includes(name.split(' ').pop().toLowerCase());
+}
+function storyMentionsKeyword(s, kw) {
+  return (s.title + ' ' + s.desc).toLowerCase().includes(kw);
+}
 
 function isRaceWeekend() {
   var d = new Date(), day = d.getDay(), h = d.getHours();
@@ -262,7 +307,7 @@ function scheduleChecks() {
   windowPostCount = 0; queuedIds = [];
   stories.forEach(function(s) { if(s.status==='queued') s.status='new'; });
   saveWindowState();
-  checkInterval = setInterval(function() { fetchAll(); scheduleChecks(); }, ms);
+  checkInterval = setInterval(function() { fetchAll(); }, ms);
   updateQueueBar();
 }
 
@@ -273,35 +318,46 @@ function updateNextCheck() {
   if (el) el.textContent = 'Next check in ' + mins + 'm';
 }
 
+// Activity log
+function logEntry(msg, type) {
+  var log = document.getElementById('activity-log');
+  if (!log) return;
+  var now = new Date().toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'});
+  var div = document.createElement('div');
+  div.className = 'log-entry';
+  div.innerHTML = '<span class="log-time">'+now+'</span><span class="log-msg '+(type||'')+'">'+msg+'</span>';
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+}
+function clearLog() {
+  var log = document.getElementById('activity-log');
+  if (log) log.innerHTML = '';
+}
+
 function titleKeywords(title) {
   var stop = new Set(['the','a','an','in','at','of','to','for','and','with','on','is','was','after','from','by','as','race','racing','grand','prix','gp','its','his','her','their','says','said']);
   return title.toLowerCase().replace(/[^a-z0-9\s]/g,'').split(/\s+/).filter(function(w) { return w.length>3 && !stop.has(w); });
 }
-
 function titlesMatch(a, b) {
   var kwA = titleKeywords(a), kwB = new Set(titleKeywords(b));
   if (!kwA.length || !kwB.size) return false;
   var matches = kwA.filter(function(w) { return kwB.has(w); }).length;
   return matches / Math.max(kwA.length, kwB.size) >= 0.4;
 }
-
 function alreadyOnSite(story) {
   for (var t of aaKeywords) { if (titlesMatch(story.title, t)) return true; }
   return false;
 }
 
-// Group similar stories into merged story objects
 function groupStories(rawStories) {
   var groups = [];
   var used = new Array(rawStories.length).fill(false);
-
   for (var i = 0; i < rawStories.length; i++) {
     if (used[i]) continue;
     var group = [rawStories[i]];
     used[i] = true;
     for (var j = i+1; j < rawStories.length; j++) {
       if (used[j]) continue;
-      // Only merge within same series and type
       if (rawStories[j].series === rawStories[i].series && rawStories[j].type === rawStories[i].type) {
         if (titlesMatch(rawStories[i].title, rawStories[j].title)) {
           group.push(rawStories[j]);
@@ -310,30 +366,23 @@ function groupStories(rawStories) {
       }
     }
     if (group.length > 1) {
-      // Merged story — use most recent title as primary
       var primary = group[0];
-      var merged = {
+      var allDrivers = [];
+      group.forEach(function(s) { s.drivers.forEach(function(d) { if (allDrivers.indexOf(d)===-1) allDrivers.push(d); }); });
+      groups.push({
         id: Math.random().toString(36).slice(2),
         title: primary.title,
         link: primary.link,
-        desc: group.map(function(s) { return '[' + s.series + ' / ' + new URL(s.link).hostname.replace('www.','') + ']: ' + s.desc; }).join('\n\n'),
+        desc: group.map(function(s) { return '['+new URL(s.link).hostname.replace('www.','')+'] '+s.desc; }).join('\n\n'),
         pubDate: primary.pubDate,
         series: primary.series,
         type: primary.type,
-        drivers: [],
-        priority: false,
+        drivers: allDrivers,
+        priority: allDrivers.length>0,
         status: 'new',
         isMerged: true,
-        sources: group.map(function(s) { return {title: s.title, link: s.link, host: new URL(s.link).hostname.replace('www.','')}; })
-      };
-      // Collect all drivers across sources
-      var allDrivers = [];
-      group.forEach(function(s) {
-        s.drivers.forEach(function(d) { if (allDrivers.indexOf(d) === -1) allDrivers.push(d); });
+        sources: group.map(function(s) { return {title:s.title, link:s.link, host:new URL(s.link).hostname.replace('www.','')}; })
       });
-      merged.drivers = allDrivers;
-      merged.priority = allDrivers.length > 0;
-      groups.push(merged);
     } else {
       groups.push(rawStories[i]);
     }
@@ -373,21 +422,40 @@ function timeAgo(dateStr) {
   if (!dateStr) return '';
   var diff = Date.now() - new Date(dateStr).getTime();
   var mins = Math.floor(diff/60000);
-  if (mins < 60) return mins + 'm ago';
+  if (mins < 60) return mins+'m ago';
   var hrs = Math.floor(mins/60);
-  if (hrs < 24) return hrs + 'h ago';
-  return Math.floor(hrs/24) + 'd ago';
+  if (hrs < 24) return hrs+'h ago';
+  return Math.floor(hrs/24)+'d ago';
+}
+
+// Select up to 4 stories for auto-posting in priority order
+function selectAutoStories(newStories) {
+  var selected = [];
+  var remaining = newStories.filter(function(s) { return s.status === 'new'; });
+  var usedIndices = [];
+
+  for (var p = 0; p < AUTO_PRIORITY.length && selected.length < MAX_POSTS; p++) {
+    for (var i = 0; i < remaining.length && selected.length < MAX_POSTS; i++) {
+      if (usedIndices.indexOf(i) === -1 && AUTO_PRIORITY[p].fn(remaining[i])) {
+        selected.push({story: remaining[i], label: AUTO_PRIORITY[p].label});
+        usedIndices.push(i);
+      }
+    }
+  }
+  return selected;
 }
 
 async function fetchAll() {
   var btn = document.getElementById('refresh-btn');
   btn.disabled = true;
   setStatus('loading', 'Checking Auto Action site...');
+  logEntry('Checking feeds...', 'info');
+
   var aaCount = await fetchAASite();
-  setStatus('loading', 'Fetching news feeds...');
+  logEntry('Auto Action site: '+aaCount+' existing stories loaded', 'info');
+
   var seen = new Set(stories.map(function(s) { return s.link; }));
   var rawNew = [], ok = 0, fail = 0, deduped = 0;
-  var log = [];
 
   for (var i = 0; i < FEEDS.length; i++) {
     var feed = FEEDS[i];
@@ -410,47 +478,162 @@ async function fetchAll() {
         var drivers = detectDrivers(title+' '+desc);
         rawNew.push({title:title, link:link, desc:desc, pubDate:pubDate, series:feed.series, type:type, drivers:drivers, priority:drivers.length>0, id:Math.random().toString(36).slice(2), status:'new', isMerged:false, sources:null});
       });
-      log.push({ok:true, msg:'['+count+' new, '+skip+' on AA] '+feed.url}); ok++;
+      ok++;
     } catch(e) {
-      log.push({ok:false, msg:'['+e.message+'] '+feed.url}); fail++;
+      fail++;
     }
   }
 
-  // Sort by priority then date before grouping
   rawNew.sort(function(a,b) { return (b.priority-a.priority)||(new Date(b.pubDate)-new Date(a.pubDate)); });
-
-  // Group similar stories
   var grouped = groupStories(rawNew);
   var mergedCount = rawNew.length - grouped.length;
 
+  if (mergedCount > 0) logEntry(mergedCount+' stories merged from multiple sources', 'info');
+  logEntry(grouped.length+' new stories found · '+ok+' feeds OK'+(fail?' · '+fail+' failed':''), grouped.length>0?'ok':'');
+  if (deduped > 0) logEntry(deduped+' stories already on Auto Action — skipped', 'info');
+
   stories = grouped.concat(stories).slice(0, 200);
 
-  if (!nextCheckTime) scheduleChecks();
-  else nextCheckTime = new Date(Date.now() + getIntervalMs());
+  if (!nextCheckTime) {
+    scheduleChecks();
+  } else {
+    nextCheckTime = new Date(Date.now() + getIntervalMs());
+  }
 
-  var summary = grouped.length + ' stories';
-  if (mergedCount > 0) summary += ' (' + mergedCount + ' merged into groups)';
-  summary += ' · ' + ok + ' feeds OK' + (fail ? ' · '+fail+' failed' : '');
-  setStatus('live', summary);
+  setStatus('live', grouped.length+' new · '+ok+' feeds OK'+(fail?' · '+fail+' failed':''));
   btn.disabled = false;
 
   var db = document.getElementById('dedup-bar');
   if (aaCount > 0 || deduped > 0) {
     db.style.display = 'block';
-    db.innerHTML = 'Checked <strong>'+aaCount+'</strong> existing Auto Action stories &mdash; <strong>'+deduped+'</strong> '+(deduped===1?'story':'stories')+' excluded as already covered';
+    db.innerHTML = 'Checked <strong>'+aaCount+'</strong> existing Auto Action stories &mdash; <strong>'+deduped+'</strong> '+(deduped===1?'story':'stories')+' excluded';
   }
-  var logEl = document.getElementById('feed-log');
-  if (fail > 0) {
-    logEl.style.display = 'block';
-    logEl.innerHTML = log.map(function(l) { return '<span class="'+(l.ok?'ok':'fail')+'">'+l.msg+'</span>'; }).join('<br>');
-  } else { logEl.style.display = 'none'; }
 
   updateCounts(); renderStories(); updateQueueBar();
+
+  // Auto-post up to 4 stories if WordPress is configured
+  if (wpSettings.url && wpSettings.user && wpSettings.pass && grouped.length > 0 && windowPostCount < MAX_POSTS) {
+    await autoPost(grouped);
+  }
+}
+
+async function autoPost(newStories) {
+  var slots = MAX_POSTS - windowPostCount;
+  if (slots <= 0) return;
+  var selected = selectAutoStories(newStories);
+  if (!selected.length) { logEntry('No stories matched auto-post priority criteria', ''); return; }
+  var toPost = selected.slice(0, slots);
+  logEntry('Auto-posting '+toPost.length+' stor'+(toPost.length===1?'y':'ies')+'...', 'auto');
+  setStatus('posting', 'Auto-posting '+toPost.length+' stories...');
+  autoPosting = true;
+
+  for (var i = 0; i < toPost.length; i++) {
+    var item = toPost[i];
+    var story = item.story;
+    logEntry('Rewriting: '+story.title.substring(0,60)+'... ('+item.label+')', 'auto');
+    try {
+      var rw = await rewriteStory(story);
+      if (rw) {
+        story._rewrite = rw;
+        logEntry('Posting to WordPress: '+rw.headline, 'post');
+        var result = await postStory(story);
+        if (result.ok) {
+          story.status = 'auto-posted';
+          windowPostCount++;
+          aaKeywords.add(rw.headline);
+          saveWindowState();
+          logEntry('Posted: '+rw.headline+' → '+result.link, 'ok');
+        } else {
+          logEntry('Post failed: '+result.error, 'err');
+        }
+      } else {
+        logEntry('Rewrite failed for: '+story.title.substring(0,50), 'err');
+      }
+    } catch(e) {
+      logEntry('Error: '+e.message, 'err');
+    }
+  }
+
+  autoPosting = false;
+  setStatus('live', 'Auto-post complete · '+windowPostCount+' posts this window');
+  updateCounts(); renderStories(); updateQueueBar();
+}
+
+async function rewriteStory(story) {
+  var isRace = story.type==='Race';
+  var driverNote = story.drivers.length ? 'Key Australian/NZ drivers mentioned: '+story.drivers.join(', ')+'. Lead with the Australian angle where relevant.' : '';
+  var wordCount = isRace ? '600-700' : (story.type==='Qualifying'||story.type==='Practice') ? '350-450' : '400-500';
+  var resultsInstruction = isRace ? '\nAfter the story body output:\nRESULTS_JSON:\n{"top5":[{"pos":1,"driver":"Full Name","team":"Team","gap":"winner"},{"pos":2,"driver":"Full Name","team":"Team","gap":"+X.XXXs"},{"pos":3,"driver":"Full Name","team":"Team","gap":"+X.XXXs"},{"pos":4,"driver":"Full Name","team":"Team","gap":"+X.XXXs"},{"pos":5,"driver":"Full Name","team":"Team","gap":"+X.XXXs"}],"championship":[{"pos":1,"driver":"Full Name","points":000},{"pos":2,"driver":"Full Name","points":000},{"pos":3,"driver":"Full Name","points":000},{"pos":4,"driver":"Full Name","points":000},{"pos":5,"driver":"Full Name","points":000}]}\nMark uncertain values with ? suffix.' : '';
+  var sourceNote = story.isMerged ? 'This story has been compiled from '+story.sources.length+' sources. Use ALL source content below.\n\n' : '';
+  var prompt = 'You are a sub-editor for Auto Action, the Australian motorsport magazine. Fully rewrite this story in Auto Action house style.\n\n'+sourceNote+'Rules:\n- Complete rewrite, fresh angle and structure.\n- Australian English throughout.\n- Story type: '+story.type+'.\n- Past tense for news and race reports.\n- No direct quotes at all.\n- Numbers one through nine spelled out; 10 and above as numerals.\n- People named in full on first mention, then surname only.\n- Safety Car always capitalised. Race, lap, round lowercase unless attached to a number.\n- Championship and series lowercase unless part of an official name.\n- No all-caps except official acronyms (NASCAR, WRC, WEC, MotoGP, IndyCar).\n- No ampersands except in official names. No en dashes or em dashes.\n- Short paragraphs, one idea each.\n- Word target: '+wordCount+' words.\n'+driverNote+'\n\nOutput using these exact labels:\nHEADLINE: [max 10 words]\nSEO TITLE: [under 60 characters]\nSLUG: [url-slug]\nTAGS: [5 tags comma separated]\nMETA: [under 155 characters]\n\nSTORY:\n[body copy]\n'+resultsInstruction+'\n\nSeries: '+story.series+'\nContent: '+story.desc;
+
+  var res = await fetch(workerUrl+'/anthropic', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({model:'claude-sonnet-4-6', max_tokens:1500, messages:[{role:'user',content:prompt}]})
+  });
+  var data = await res.json();
+  var text = data.content && data.content[0] ? data.content[0].text : '';
+  if (!text) return null;
+  function g(label) { var l = text.split('\n').find(function(x) { return x.startsWith(label+':'); }); return l ? l.replace(label+':','').trim() : ''; }
+  var headline = g('HEADLINE'), seoTitle = g('SEO TITLE'), slug = g('SLUG'), tags = g('TAGS'), meta = g('META');
+  var si = text.indexOf('STORY:'), ri = text.indexOf('RESULTS_JSON:');
+  var body = si>=0 ? text.slice(si+6, ri>0?ri:undefined).trim() : text;
+  var resultsHTML = '';
+  if (isRace && ri>=0) {
+    try {
+      var parsed = JSON.parse(text.slice(ri+13).trim().replace(/```json|```/g,'').trim());
+      resultsHTML = renderResultsTable(
+        (parsed.top5||[]).map(function(r) { return {driver:r.driver,team:r.team,gap:r.gap}; }),
+        (parsed.championship||[]).map(function(c) { return {driver:c.driver,points:c.points}; })
+      );
+    } catch(e) {}
+  }
+  return {text:text, headline:headline, seoTitle:seoTitle, slug:slug, tags:tags, meta:meta, body:body, resultsHTML:resultsHTML};
+}
+
+async function postStory(story) {
+  var rw = story._rewrite;
+  var fullContent = rw.body + (rw.resultsHTML ? '\n\n'+rw.resultsHTML : '');
+  var tagList = (rw.tags||'').split(',').map(function(t) { return t.trim(); }).filter(Boolean);
+  var res = await fetch(workerUrl+'/wordpress', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({
+      wpUrl: wpSettings.url, wpUser: wpSettings.user, wpPass: wpSettings.pass,
+      wpStatus: wpSettings.status||'draft',
+      title: rw.headline, content: fullContent, slug: rw.slug, excerpt: rw.meta, tags: tagList
+    })
+  });
+  if (res.ok) {
+    var post = await res.json();
+    return {ok:true, link:post.link||''};
+  } else {
+    var err = await res.json();
+    return {ok:false, error:err.message||res.status};
+  }
 }
 
 function seriesTagClass(s) {
   var m = {NASCAR:'tag-nascar',IndyCar:'tag-indycar',MotoGP:'tag-motogp',WRC:'tag-wrc',WEC:'tag-wec',News:'tag-news'};
-  return m[s] || 'tag-news';
+  return m[s]||'tag-news';
+}
+
+function renderResultsTable(top5, champ) {
+  if (!top5||!top5.length) return '';
+  var rows = top5.slice(0,5).map(function(r,i) {
+    var w = isWatchedDriver(r.driver||'');
+    return '<tr class="'+(w?'watched':'')+'"><td>'+(i+1)+'</td><td>'+(r.driver||'')+'</td><td style="color:var(--text3)">'+(r.team||'')+'</td><td style="color:var(--text3);text-align:right">'+(r.gap||'')+'</td></tr>';
+  }).join('');
+  var champBlock = '';
+  if (champ&&champ.length) {
+    var crows = champ.slice(0,5).map(function(c,i) {
+      var w = isWatchedDriver(c.driver||'');
+      return '<tr class="'+(w?'watched':'')+'"><td>'+(i+1)+'</td><td>'+(c.driver||'')+'</td><td style="color:var(--text3);text-align:right">'+(c.points||'')+' pts</td></tr>';
+    }).join('');
+    champBlock = '<div><div class="rt-label">Championship</div><table class="rt"><thead><tr><th></th><th>Driver</th><th style="text-align:right">Points</th></tr></thead><tbody>'+crows+'</tbody></table></div>';
+  }
+  return '<div class="results-block"><div class="results-grid"><div><div class="rt-label">Race result</div><table class="rt"><thead><tr><th></th><th>Driver</th><th>Team</th><th style="text-align:right">Gap</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+champBlock+'</div><div style="font-size:10px;color:var(--text3);margin-top:6px">Blue = watched driver</div></div>';
 }
 
 function renderStories() {
@@ -459,33 +642,51 @@ function renderStories() {
     if (currentType !== 'all' && s.type !== currentType) return false;
     if (currentStatus === 'new' && s.status !== 'new') return false;
     if (currentStatus === 'queued' && s.status !== 'queued') return false;
-    if (currentStatus === 'posted' && s.status !== 'posted') return false;
+    if (currentStatus === 'posted' && (s.status !== 'posted' && s.status !== 'auto-posted')) return false;
     return true;
   });
-
   var list = document.getElementById('stories-list');
   if (!filtered.length) {
     list.innerHTML = '<div class="empty-state"><h3>No stories found</h3><p>Hit "Check now" to fetch the latest.</p></div>';
     return;
   }
-
   list.innerHTML = filtered.map(function(s) {
-    var isQueued = s.status==='queued', isPosted = s.status==='posted';
+    var isQueued = s.status==='queued';
+    var isPosted = s.status==='posted'||s.status==='auto-posted';
+    var isAuto = s.status==='auto-posted';
     var queueFull = queuedIds.length >= MAX_POSTS;
-    var cardClass = 'story-card' + (s.priority?' priority':'') + (isPosted?' posted-card':'') + (s.isMerged?' merged-card':'');
+    var wpReady = wpSettings.url && wpSettings.user && wpSettings.pass;
+    var limitHit = windowPostCount >= MAX_POSTS;
+    var cardClass = 'story-card'+(s.priority?' priority':'')+(isPosted?' posted-card':'')+(s.isMerged?' merged-card':'');
 
     var sourcesHtml = '';
     if (s.isMerged && s.sources) {
-      sourcesHtml = '<div class="sources-list">Sources: ' + s.sources.map(function(src) { return '<span>'+src.host+'</span>'; }).join(', ') + '</div>';
+      sourcesHtml = '<div class="sources-list">Sources: '+s.sources.map(function(src) { return '<span>'+src.host+'</span>'; }).join(', ')+'</div>';
     }
+    var sourceLinks = s.isMerged && s.sources
+      ? s.sources.map(function(src) { return '<a href="'+src.link+'" target="_blank" class="source-link">'+src.host+' &rarr;</a>'; }).join('')
+      : '<a href="'+s.link+'" target="_blank" class="source-link">Source &rarr;</a>';
 
-    var sourceLinks = '';
-    if (s.isMerged && s.sources) {
-      sourceLinks = s.sources.map(function(src) {
-        return '<a href="'+src.link+'" target="_blank" class="source-link">'+src.host+' &rarr;</a>';
-      }).join('');
-    } else {
-      sourceLinks = '<a href="'+s.link+'" target="_blank" class="source-link">Source &rarr;</a>';
+    var rwSection = '';
+    if (s._rewrite) {
+      var rw = s._rewrite;
+      var fullContent = rw.body + (rw.resultsHTML ? '\n\n'+rw.resultsHTML : '');
+      rwSection = '<div class="rewrite-output">'
+        +'<div class="output-grid">'
+        +'<div class="output-field"><label>Headline</label><div class="val headline">'+rw.headline+'</div></div>'
+        +'<div class="output-field"><label>Slug</label><div class="val"><code>'+rw.slug+'</code></div></div>'
+        +'<div class="output-field"><label>Tags</label><div class="val">'+rw.tags+'</div></div>'
+        +'<div class="output-field"><label>Meta</label><div class="val" style="font-size:11px;color:var(--text3)">'+rw.meta+'</div></div>'
+        +'</div>'
+        +'<div class="story-body-output" id="body-'+s.id+'">'+rw.body+'</div>'
+        +(rw.resultsHTML||'')
+        +'<div class="post-row">'
+        +'<button class="btn-xs" onclick="copyBody(\''+s.id+'\')">Copy story</button>'
+        +'<span class="copy-confirm" id="copied-'+s.id+'">Copied!</span>'
+        +(wpReady&&!limitHit&&!isPosted ? '<button class="btn btn-primary" style="font-size:11px;padding:4px 14px" onclick="postSingle(\''+s.id+'\')">Post to WordPress</button>' : '')
+        +(limitHit&&!isPosted ? '<span class="limit-note">4-post limit reached</span>' : '')
+        +'<span id="wpres-'+s.id+'"></span>'
+        +'</div></div>';
     }
 
     return '<div class="'+cardClass+'" id="card-'+s.id+'">'
@@ -493,7 +694,7 @@ function renderStories() {
       +'<div class="tags-col">'
       +'<span class="series-tag '+seriesTagClass(s.series)+'">'+s.series+'</span>'
       +'<span class="type-pill">'+s.type+'</span>'
-      +(s.isMerged ? '<span class="merged-badge">'+(s.sources?s.sources.length:2)+' sources</span>' : '')
+      +(s.isMerged ? '<span class="merged-badge">'+(s.sources?s.sources.length:2)+' src</span>' : '')
       +'</div>'
       +'<div class="card-body">'
       +'<div class="story-title">'+s.title+'</div>'
@@ -501,12 +702,13 @@ function renderStories() {
       +sourcesHtml
       +(s.drivers.length ? '<div class="driver-tags">'+s.drivers.map(function(d) { return '<span class="driver-chip">'+d+'</span>'; }).join('')+'</div>' : '')
       +'<div class="card-actions">'
-      +'<button class="btn-xs" onclick="rewrite(\''+s.id+'\')">Rewrite'+(s.isMerged?' ('+s.sources.length+' sources)':'')+'</button>'
-      +(!isPosted&&!isQueued ? '<button class="btn-blue" onclick="addToQueue(\''+s.id+'\')" '+(queueFull?'disabled':'')+'>+ Queue</button>' : '')
+      +(!isPosted ? '<button class="btn-xs" onclick="rewriteManual(\''+s.id+'\')">Rewrite'+(s.isMerged?' ('+s.sources.length+' src)':'')+'</button>' : '')
+      +(!isPosted&&!isQueued&&!s._rewrite ? '<button class="btn-blue" onclick="addToQueue(\''+s.id+'\')" '+(queueFull?'disabled':'')+'>+ Queue</button>' : '')
       +(isQueued ? '<span class="queued-badge">Queued</span><button class="btn-xs" onclick="removeFromQueue(\''+s.id+'\')" style="opacity:0.6">Remove</button>' : '')
-      +(isPosted ? '<span class="posted-badge">Posted</span>' : '')
+      +(isAuto ? '<span class="auto-badge">Auto-posted</span>' : (isPosted ? '<span class="posted-badge">Posted</span>' : ''))
       +sourceLinks
       +'</div>'
+      +(s._rewrite && !isPosted ? rwSection : '')
       +'<div id="rw-'+s.id+'"></div>'
       +'</div></div></div>';
   }).join('');
@@ -556,110 +758,20 @@ async function postQueue() {
   }
 }
 
-function renderResultsTable(top5, champ) {
-  if (!top5||!top5.length) return '';
-  var rows = top5.slice(0,5).map(function(r,i) {
-    var w = isWatchedDriver(r.driver||'');
-    return '<tr class="'+(w?'watched':'')+'"><td>'+(i+1)+'</td><td>'+(r.driver||'')+'</td><td style="color:var(--text3)">'+(r.team||'')+'</td><td style="color:var(--text3);text-align:right">'+(r.gap||'')+'</td></tr>';
-  }).join('');
-  var champBlock = '';
-  if (champ&&champ.length) {
-    var crows = champ.slice(0,5).map(function(c,i) {
-      var w = isWatchedDriver(c.driver||'');
-      return '<tr class="'+(w?'watched':'')+'"><td>'+(i+1)+'</td><td>'+(c.driver||'')+'</td><td style="color:var(--text3);text-align:right">'+(c.points||'')+' pts</td></tr>';
-    }).join('');
-    champBlock = '<div><div class="rt-label">Championship</div><table class="rt"><thead><tr><th></th><th>Driver</th><th style="text-align:right">Points</th></tr></thead><tbody>'+crows+'</tbody></table></div>';
-  }
-  return '<div class="results-block"><div class="results-grid"><div><div class="rt-label">Race result</div><table class="rt"><thead><tr><th></th><th>Driver</th><th>Team</th><th style="text-align:right">Gap</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+champBlock+'</div><div style="font-size:10px;color:var(--text3);margin-top:6px">Blue = watched driver</div></div>';
-}
-
-async function rewrite(id) {
+async function rewriteManual(id) {
   var story = stories.find(function(s) { return s.id===id; }); if (!story) return;
   var rw = document.getElementById('rw-'+id);
   var srcCount = story.isMerged && story.sources ? story.sources.length : 1;
   rw.innerHTML = '<div style="margin-top:10px;font-size:12px;color:#5b9fd6;display:flex;align-items:center;gap:6px"><span class="spin"></span> Rewriting from '+srcCount+' source'+(srcCount>1?'s':'')+'...</div>';
-
-  var isRace = story.type==='Race';
-  var driverNote = story.drivers.length ? 'Key Australian/NZ drivers mentioned: '+story.drivers.join(', ')+'. Lead with the Australian angle where relevant.' : '';
-  var wordCount = isRace ? '600-700' : (story.type==='Qualifying'||story.type==='Practice') ? '350-450' : '400-500';
-  var resultsInstruction = isRace ? '\nAfter the story body output:\nRESULTS_JSON:\n{"top5":[{"pos":1,"driver":"Full Name","team":"Team","gap":"winner"},{"pos":2,"driver":"Full Name","team":"Team","gap":"+X.XXXs"},{"pos":3,"driver":"Full Name","team":"Team","gap":"+X.XXXs"},{"pos":4,"driver":"Full Name","team":"Team","gap":"+X.XXXs"},{"pos":5,"driver":"Full Name","team":"Team","gap":"+X.XXXs"}],"championship":[{"pos":1,"driver":"Full Name","points":000},{"pos":2,"driver":"Full Name","points":000},{"pos":3,"driver":"Full Name","points":000},{"pos":4,"driver":"Full Name","points":000},{"pos":5,"driver":"Full Name","points":000}]}\nMark uncertain values with ? suffix.' : '';
-
-  var sourceNote = story.isMerged
-    ? 'This story has been compiled from '+srcCount+' sources. Use ALL of the source content below to write the most complete and accurate version possible, drawing on details from every source.\n\n'
-    : '';
-
-  var prompt = 'You are a sub-editor for Auto Action, the Australian motorsport magazine. Fully rewrite this story in Auto Action house style.\n\n'
-    +sourceNote
-    +'Rules:\n'
-    +'- Complete rewrite, fresh angle and structure. Not a paraphrase.\n'
-    +'- Australian English throughout.\n'
-    +'- Story type: '+story.type+'. Match tone accordingly.\n'
-    +'- Past tense for news and race reports.\n'
-    +'- No direct quotes at all. Facts and outcomes only.\n'
-    +'- Numbers one through nine spelled out; 10 and above as numerals.\n'
-    +'- People named in full on first mention, then surname only.\n'
-    +'- Safety Car always capitalised. Race, lap, round lowercase unless attached to a number.\n'
-    +'- Championship and series lowercase unless part of an official name.\n'
-    +'- No all-caps except official acronyms (NASCAR, WRC, WEC, MotoGP, IndyCar).\n'
-    +'- No ampersands except in official names. No en dashes or em dashes.\n'
-    +'- Short paragraphs, one idea each.\n'
-    +'- Word target: '+wordCount+' words.\n'
-    +driverNote+'\n\n'
-    +'Output using these exact labels:\n'
-    +'HEADLINE: [max 10 words]\n'
-    +'SEO TITLE: [under 60 characters]\n'
-    +'SLUG: [url-slug]\n'
-    +'TAGS: [5 tags comma separated]\n'
-    +'META: [under 155 characters]\n\n'
-    +'STORY:\n'
-    +'[body copy]\n'
-    +resultsInstruction+'\n\n'
-    +'Series: '+story.series+'\n'
-    +'Source content:\n'+story.desc;
-
   try {
-    var res = await fetch(workerUrl+'/anthropic', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({model:'claude-sonnet-4-6', max_tokens:1500, messages:[{role:'user',content:prompt}]})
-    });
-    var data = await res.json();
-    var text = data.content && data.content[0] ? data.content[0].text : '';
-    function g(label) { var l = text.split('\n').find(function(x) { return x.startsWith(label+':'); }); return l ? l.replace(label+':','').trim() : ''; }
-    var headline = g('HEADLINE'), seoTitle = g('SEO TITLE'), slug = g('SLUG'), tags = g('TAGS'), meta = g('META');
-    var si = text.indexOf('STORY:'), ri = text.indexOf('RESULTS_JSON:');
-    var body = si>=0 ? text.slice(si+6, ri>0?ri:undefined).trim() : text;
-    var resultsHTML = '';
-    if (isRace && ri>=0) {
-      try {
-        var parsed = JSON.parse(text.slice(ri+13).trim().replace(/```json|```/g,'').trim());
-        resultsHTML = renderResultsTable(
-          (parsed.top5||[]).map(function(r) { return {driver:r.driver,team:r.team,gap:r.gap}; }),
-          (parsed.championship||[]).map(function(c) { return {driver:c.driver,points:c.points}; })
-        );
-      } catch(e) {}
-    }
-    story._rewrite = {text:text, headline:headline, seoTitle:seoTitle, slug:slug, tags:tags, meta:meta, body:body, resultsHTML:resultsHTML};
-    var wpReady = wpSettings.url && wpSettings.user && wpSettings.pass;
-    var limitHit = windowPostCount >= MAX_POSTS;
-    rw.innerHTML = '<div class="rewrite-output">'
-      +'<div class="output-grid">'
-      +'<div class="output-field"><label>Headline</label><div class="val headline">'+headline+'</div></div>'
-      +'<div class="output-field"><label>Slug</label><div class="val"><code>'+slug+'</code></div></div>'
-      +'<div class="output-field"><label>Tags</label><div class="val">'+tags+'</div></div>'
-      +'<div class="output-field"><label>Meta</label><div class="val" style="font-size:11px;color:var(--text3)">'+meta+'</div></div>'
-      +'</div>'
-      +'<div class="story-body-output" id="body-'+id+'">'+body+'</div>'
-      +resultsHTML
-      +'<div class="post-row">'
-      +'<button class="btn-xs" onclick="copyBody(\''+id+'\')">Copy story</button>'
-      +'<span class="copy-confirm" id="copied-'+id+'">Copied!</span>'
-      +(wpReady&&!limitHit&&story.status!=='posted' ? '<button class="btn btn-primary" style="font-size:11px;padding:4px 14px" onclick="postSingle(\''+id+'\')">Post to WordPress</button>' : '')
-      +(limitHit&&story.status!=='posted' ? '<span class="limit-note">4-post limit reached</span>' : '')
-      +'<span id="wpres-'+id+'"></span>'
-      +'</div></div>';
+    var result = await rewriteStory(story);
+    if (!result) { rw.innerHTML = '<div style="font-size:12px;color:var(--accent);margin-top:8px">Rewrite failed — empty response.</div>'; return; }
+    story._rewrite = result;
+    logEntry('Rewritten: '+result.headline, 'ok');
+    renderStories();
   } catch(e) {
     rw.innerHTML = '<div style="font-size:12px;color:var(--accent);margin-top:8px">Rewrite failed: '+e.message+'</div>';
+    logEntry('Rewrite error: '+e.message, 'err');
   }
 }
 
@@ -676,38 +788,18 @@ async function postSingle(id) {
   var story = stories.find(function(s) { return s.id===id; }); if(!story||!story._rewrite) return;
   var el = document.getElementById('wpres-'+id);
   if(el) el.innerHTML = '<span style="font-size:11px;color:#5b9fd6;display:inline-flex;align-items:center;gap:4px"><span class="spin"></span> Posting...</span>';
-  var rw = story._rewrite;
-  var fullContent = rw.body + (rw.resultsHTML ? '\n\n' + rw.resultsHTML : '');
-  var tagList = (rw.tags || '').split(',').map(function(t) { return t.trim(); }).filter(Boolean);
-  try {
-    var res = await fetch(workerUrl+'/wordpress', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({
-        wpUrl: wpSettings.url,
-        wpUser: wpSettings.user,
-        wpPass: wpSettings.pass,
-        wpStatus: wpSettings.status || 'draft',
-        title: rw.headline,
-        content: fullContent,
-        slug: rw.slug,
-        excerpt: rw.meta,
-        tags: tagList
-      })
-    });
-    if (res.ok) {
-      var post = await res.json();
-      windowPostCount++; story.status='posted'; queuedIds=queuedIds.filter(function(x){return x!==id;});
-      aaKeywords.add(rw.headline);
-      saveWindowState();
-      if(el) el.innerHTML = '<span style="font-size:11px;color:var(--green)">Posted &mdash; <a href="'+post.link+'" target="_blank" style="color:inherit">view post</a></span>';
-      updateQueueBar(); renderStories();
-    } else {
-      var err = await res.json();
-      if(el) el.innerHTML = '<span style="font-size:11px;color:var(--accent)">WP error: '+(err.message||res.status)+'</span>';
-    }
-  } catch(e) {
-    if(el) el.innerHTML = '<span style="font-size:11px;color:var(--accent)">Could not reach WordPress.</span>';
+  logEntry('Posting: '+story._rewrite.headline, 'post');
+  var result = await postStory(story);
+  if (result.ok) {
+    windowPostCount++; story.status='posted'; queuedIds=queuedIds.filter(function(x){return x!==id;});
+    aaKeywords.add(story._rewrite.headline);
+    saveWindowState();
+    logEntry('Posted: '+story._rewrite.headline, 'ok');
+    if(el) el.innerHTML = '<span style="font-size:11px;color:var(--green)">Posted &mdash; <a href="'+result.link+'" target="_blank" style="color:inherit">view post</a></span>';
+    updateQueueBar(); renderStories();
+  } else {
+    logEntry('Post failed: '+result.error, 'err');
+    if(el) el.innerHTML = '<span style="font-size:11px;color:var(--accent)">WP error: '+result.error+'</span>';
   }
 }
 
@@ -731,15 +823,15 @@ function saveSettings() {
   try { localStorage.setItem('aa-wp', JSON.stringify(wpSettings)); } catch(e) {}
   try { localStorage.setItem('aa-worker', workerUrl); } catch(e) {}
   closeSettings(); updateQueueBar();
+  logEntry('Settings saved', 'ok');
 }
 
 function setStatus(state, text) {
   var dot = document.getElementById('status-dot');
   var txt = document.getElementById('status-text');
-  dot.className = 'status-indicator' + (state==='live'?' live':state==='loading'?' loading':'');
+  dot.className = 'status-indicator'+(state==='live'?' live':state==='loading'?' loading':state==='posting'?' posting':'');
   txt.textContent = text;
 }
-
 function updateQueueBar() {
   document.getElementById('posts-used').textContent = windowPostCount;
   var dots = document.getElementById('queue-dots');
@@ -747,15 +839,15 @@ function updateQueueBar() {
   var mode = document.getElementById('queue-mode');
   var rw = isRaceWeekend();
   mode.textContent = rw ? 'Race weekend' : 'Quiet period';
-  mode.className = 'queue-mode' + (rw?' race':'');
+  mode.className = 'queue-mode'+(rw?' race':'');
   var pqb = document.getElementById('post-queue-btn');
   pqb.style.display = queuedIds.length>0 && wpSettings.url ? 'block' : 'none';
 }
-
 function resetWindow() {
   windowPostCount=0; queuedIds=[];
   stories.forEach(function(s){if(s.status==='queued')s.status='new';});
   saveWindowState(); updateQueueBar(); renderStories();
+  logEntry('Window reset', 'info');
 }
 function saveWindowState() {
   try { localStorage.setItem('aa-window', JSON.stringify({count:windowPostCount,start:windowStartTime})); } catch(e) {}
