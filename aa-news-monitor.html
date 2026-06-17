@@ -880,8 +880,25 @@ function saveSettings() {
   workerUrl = document.getElementById('worker-url').value.trim().replace(/\/$/,'');
   try { localStorage.setItem('aa-wp', JSON.stringify(wpSettings)); } catch(e) {}
   try { localStorage.setItem('aa-worker', workerUrl); } catch(e) {}
-  closeSettings(); updateQueueBar(); renderStories();
+  closeSettings(); updateQueueBar();
   logEntry('Settings saved', 'ok');
+  // Swap out any "Set up WordPress first" buttons with real Post buttons
+  document.querySelectorAll('.post-row').forEach(function(row) {
+    var setupBtn = Array.from(row.querySelectorAll('button')).find(function(b) { return b.textContent.indexOf('Set up WordPress') !== -1; });
+    if (setupBtn) {
+      var wpresEl = row.querySelector('[id^="wpres-"]');
+      if (wpresEl) {
+        var sid = wpresEl.id.replace('wpres-','');
+        var newBtn = document.createElement('button');
+        newBtn.className = 'btn btn-primary';
+        newBtn.style.cssText = 'font-size:11px;padding:4px 14px';
+        newBtn.textContent = 'Post to WordPress';
+        newBtn.onclick = (function(id) { return function() { postSingle(id); }; })(sid);
+        row.insertBefore(newBtn, setupBtn);
+        setupBtn.remove();
+      }
+    }
+  });
 }
 
 function setStatus(state, text) {
