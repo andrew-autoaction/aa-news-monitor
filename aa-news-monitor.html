@@ -559,13 +559,52 @@ async function autoPost(newStories) {
   updateCounts(); renderStories(); updateQueueBar();
 }
 
+async function fetchFullArticle(url) {
+  try {
+    var res = await fetch(proxy(url), {signal: AbortSignal.timeout(10000)});
+    if (!res.ok) return null;
+    var html = await res.text();
+    // Strip scripts, styles, nav, footer, ads
+    html = html.replace(/<script[\s\S]*?<\/script>/gi,'');
+    html = html.replace(/<style[\s\S]*?<\/style>/gi,'');
+    html = html.replace(/<nav[\s\S]*?<\/nav>/gi,'');
+    html = html.replace(/<footer[\s\S]*?<\/footer>/gi,'');
+    html = html.replace(/<header[\s\S]*?<\/header>/gi,'');
+    html = html.replace(/<aside[\s\S]*?<\/aside>/gi,'');
+    // Get text content
+    var text = html.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
+    // Return up to 3000 chars of meaningful content
+    return text.length > 200 ? text.substring(0, 3000) : null;
+  } catch(e) {
+    return null;
+  }
+}
+
 async function rewriteStory(story) {
   var isRace = story.type==='Race';
   var driverNote = story.drivers.length ? 'Key Australian/NZ drivers mentioned: '+story.drivers.join(', ')+'. Lead with the Australian angle where relevant.' : '';
   var wordCount = isRace ? '600-700' : (story.type==='Qualifying'||story.type==='Practice') ? '350-450' : '400-500';
   var resultsInstruction = isRace ? '\nAfter the story body output:\nRESULTS_JSON:\n{"top5":[{"pos":1,"driver":"Full Name","team":"Team","gap":"winner"},{"pos":2,"driver":"Full Name","team":"Team","gap":"+X.XXXs"},{"pos":3,"driver":"Full Name","team":"Team","gap":"+X.XXXs"},{"pos":4,"driver":"Full Name","team":"Team","gap":"+X.XXXs"},{"pos":5,"driver":"Full Name","team":"Team","gap":"+X.XXXs"}],"championship":[{"pos":1,"driver":"Full Name","points":000},{"pos":2,"driver":"Full Name","points":000},{"pos":3,"driver":"Full Name","points":000},{"pos":4,"driver":"Full Name","points":000},{"pos":5,"driver":"Full Name","points":000}]}\nMark uncertain values with ? suffix.' : '';
   var sourceNote = story.isMerged ? 'This story has been compiled from '+story.sources.length+' sources. Use ALL source content below.\n\n' : '';
-  var prompt = 'You are a sub-editor for Auto Action, the Australian motorsport magazine. Fully rewrite this story in Auto Action house style.\n\n'+sourceNote+'Rules:\n- Complete rewrite, fresh angle and structure.\n- Australian English throughout.\n- Story type: '+story.type+'.\n- Past tense for news and race reports.\n- No direct quotes at all.\n- Numbers one through nine spelled out; 10 and above as numerals.\n- People named in full on first mention, then surname only.\n- Safety Car always capitalised. Race, lap, round lowercase unless attached to a number.\n- Championship and series lowercase unless part of an official name.\n- No all-caps except official acronyms (NASCAR, WRC, WEC, MotoGP, IndyCar).\n- No ampersands except in official names. No en dashes or em dashes.\n- Short paragraphs, one idea each.\n- Word target: '+wordCount+' words.\n'+driverNote+'\n\nOutput using these exact labels:\nHEADLINE: [max 10 words]\nSEO TITLE: [under 60 characters]\nSLUG: [url-slug]\nTAGS: [5 tags comma separated]\nMETA: [under 155 characters]\n\nSTORY:\n[body copy]\n'+resultsInstruction+'\n\nSeries: '+story.series+'\nContent: '+story.desc;
+
+  // Try to fetch full article text
+  var fullText = null;
+  var sourceUrl = story.isMerged && story.sources ? story.sources[0].link : story.link;
+  if (sourceUrl) {
+    fullText = await fetchFullArticle(sourceUrl);
+  }
+  // For merged stories, try to fetch additional sources too
+  if (story.isMerged && story.sources && story.sources.length > 1) {
+    for (var si2 = 1; si2 < Math.min(story.sources.length, 3); si2++) {
+      var extra = await fetchFullArticle(story.sources[si2].link);
+      if (extra) fullText = (fullText || '') + '\n\n[Additional source: '+story.sources[si2].host+']\n' + extra.substring(0, 1000);
+    }
+  }
+
+  var contentToUse = fullText ? fullText : story.desc;
+  var contentNote = fullText ? 'Full article text provided below.' : 'Only RSS excerpt available — write from what is provided.';
+
+  var prompt = 'You are a sub-editor for Auto Action, the Australian motorsport magazine. Fully rewrite this story in Auto Action house style.\n\n'+sourceNote+contentNote+'\n\nRules:\n- Complete rewrite, fresh angle and structure.\n- Australian English throughout.\n- Story type: '+story.type+'.\n- Past tense for news and race reports.\n- No direct quotes at all.\n- Numbers one through nine spelled out; 10 and above as numerals.\n- People named in full on first mention, then surname only.\n- Safety Car always capitalised. Race, lap, round lowercase unless attached to a number.\n- Championship and series lowercase unless part of an official name.\n- No all-caps except official acronyms (NASCAR, WRC, WEC, MotoGP, IndyCar).\n- No ampersands except in official names. No en dashes or em dashes.\n- Short paragraphs, one idea each.\n- Word target: '+wordCount+' words.\n'+driverNote+'\n\nOutput using these exact labels:\nHEADLINE: [max 10 words]\nSEO TITLE: [under 60 characters]\nSLUG: [url-slug]\nTAGS: [5 tags comma separated]\nMETA: [under 155 characters]\n\nSTORY:\n[body copy]\n'+resultsInstruction+'\n\nSeries: '+story.series+'\nSource URL: '+sourceUrl+'\nContent:\n'+contentToUse;
 
   var res = await fetch(workerUrl+'/anthropic', {
     method:'POST',
