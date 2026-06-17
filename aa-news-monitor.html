@@ -694,7 +694,7 @@ function renderStories() {
     var isPosted = s.status==='posted'||s.status==='auto-posted';
     var isAuto = s.status==='auto-posted';
     var queueFull = queuedIds.length >= MAX_POSTS;
-    var wpReady = wpSettings.url && wpSettings.user && wpSettings.pass;
+    var wpReady = !!(wpSettings.url && wpSettings.user && wpSettings.pass);
     var limitHit = windowPostCount >= MAX_POSTS;
     var cardClass = 'story-card'+(s.priority?' priority':'')+(isPosted?' posted-card':'')+(s.isMerged?' merged-card':'');
 
@@ -807,7 +807,26 @@ async function rewriteManual(id) {
     if (!result) { rw.innerHTML = '<div style="font-size:12px;color:var(--accent);margin-top:8px">Rewrite failed — empty response.</div>'; return; }
     story._rewrite = result;
     logEntry('Rewritten: '+result.headline, 'ok');
-    renderStories();
+    // Inject post button directly into the rw div so it appears immediately
+    var wpReady2 = !!(wpSettings.url && wpSettings.user && wpSettings.pass);
+    var limitHit2 = windowPostCount >= MAX_POSTS;
+    rw.innerHTML = '<div class="rewrite-output">'
+      +'<div class="output-grid">'
+      +'<div class="output-field"><label>Headline</label><div class="val headline">'+result.headline+'</div></div>'
+      +'<div class="output-field"><label>Slug</label><div class="val"><code>'+result.slug+'</code></div></div>'
+      +'<div class="output-field"><label>Tags</label><div class="val">'+result.tags+'</div></div>'
+      +'<div class="output-field"><label>Meta</label><div class="val" style="font-size:11px;color:var(--text3)">'+result.meta+'</div></div>'
+      +'</div>'
+      +'<div class="story-body-output" id="body-'+id+'">'+result.body+'</div>'
+      +(result.resultsHTML||'')
+      +'<div class="post-row">'
+      +'<button class="btn-xs" onclick="copyBody(\''+id+'\')">Copy story</button>'
+      +'<span class="copy-confirm" id="copied-'+id+'">Copied!</span>'
+      +(wpReady2&&!limitHit2 ? '<button class="btn btn-primary" style="font-size:11px;padding:4px 14px" onclick="postSingle(\''+id+'\')">Post to WordPress</button>' : '')
+      +(!wpReady2 ? '<button class="btn btn-secondary" style="font-size:11px;padding:4px 14px" onclick="openSettings()">Set up WordPress first</button>' : '')
+      +(limitHit2 ? '<span class="limit-note">4-post limit reached this window</span>' : '')
+      +'<span id="wpres-'+id+'"></span>'
+      +'</div></div>';
   } catch(e) {
     rw.innerHTML = '<div style="font-size:12px;color:var(--accent);margin-top:8px">Rewrite failed: '+e.message+'</div>';
     logEntry('Rewrite error: '+e.message, 'err');
@@ -861,7 +880,7 @@ function saveSettings() {
   workerUrl = document.getElementById('worker-url').value.trim().replace(/\/$/,'');
   try { localStorage.setItem('aa-wp', JSON.stringify(wpSettings)); } catch(e) {}
   try { localStorage.setItem('aa-worker', workerUrl); } catch(e) {}
-  closeSettings(); updateQueueBar();
+  closeSettings(); updateQueueBar(); renderStories();
   logEntry('Settings saved', 'ok');
 }
 
